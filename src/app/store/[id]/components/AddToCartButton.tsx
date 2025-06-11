@@ -36,14 +36,18 @@ export function AddToCartButton({ productId, productTitle }: AddToCartButtonProp
         }),
       })
 
-      if (!response.ok) {
-        const error = await response.json()
-        alert(error.error || 'حدث خطأ في إضافة المنتج للسلة')
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        alert(data.error || 'حدث خطأ في إضافة المنتج للسلة')
         return
       }
 
       // إظهار حالة النجاح
       setIsAdded(true)
+      
+      // تحديث السلة في الواجهة
+      window.dispatchEvent(new CustomEvent('cartUpdated'))
       
       // إشعار نجاح
       const successDiv = document.createElement('div')

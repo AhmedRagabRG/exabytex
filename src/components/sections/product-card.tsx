@@ -6,7 +6,9 @@ import { Product } from "@/types"
 import Link from "next/link"
 import { useCart } from "@/components/providers/cart-provider"
 import { useSession } from "next-auth/react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import Image from 'next/image'
+import { PriceDisplay, DiscountPrice } from '@/components/ui/PriceDisplay'
 
 interface ProductCardProps {
   product: Product
@@ -43,6 +45,45 @@ export function ProductCard({ product, viewMode = "grid" }: ProductCardProps) {
       setIsAdding(false)
     }
   }
+
+  // استمع للـ events من CartProvider
+  useEffect(() => {
+    const handleSuccess = (event: any) => {
+      // إشعار نجاح باستخدام native notification
+      if (typeof window !== 'undefined') {
+        const successDiv = document.createElement('div')
+        successDiv.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-pulse'
+        successDiv.textContent = `تم إضافة "${product.title}" للسلة بنجاح!`
+        document.body.appendChild(successDiv)
+        
+        setTimeout(() => {
+          successDiv.remove()
+        }, 3000)
+      }
+    }
+
+    const handleError = (event: any) => {
+      // إشعار خطأ
+      if (typeof window !== 'undefined') {
+        const errorDiv = document.createElement('div')
+        errorDiv.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50'
+        errorDiv.textContent = event.detail.message || 'خطأ في إضافة المنتج للسلة'
+        document.body.appendChild(errorDiv)
+        
+        setTimeout(() => {
+          errorDiv.remove()
+        }, 4000)
+      }
+    }
+
+    window.addEventListener('addToCartSuccess', handleSuccess)
+    window.addEventListener('addToCartError', handleError)
+
+    return () => {
+      window.removeEventListener('addToCartSuccess', handleSuccess)
+      window.removeEventListener('addToCartError', handleError)
+    }
+  }, [product.title])
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
@@ -150,27 +191,14 @@ export function ProductCard({ product, viewMode = "grid" }: ProductCardProps) {
               <div className="flex items-center justify-between">
                 <div>
                   {product.hasDiscount && product.discountedPrice ? (
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-2xl font-bold text-green-400">
-                          {product.discountedPrice.toLocaleString('ar-SA')} ر.س
-                        </span>
-                        <span className="text-sm bg-green-500/20 text-green-400 px-2 py-1 rounded-full font-medium">
-                          وفر {discountPercentage}%
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-400 line-through">
-                          {product.price.toLocaleString('ar-SA')} ر.س
-                        </span>
-                        <span className="text-xs text-gray-500">السعر الأصلي</span>
-                      </div>
-                    </div>
+                    <DiscountPrice 
+                      amount={product.discountedPrice}
+                      originalAmount={product.price}
+                      showSavings={true}
+                    />
                   ) : (
                     <div>
-                      <span className="text-2xl font-bold text-white">
-                        {product.price.toLocaleString('ar-SA')} ر.س
-                      </span>
+                      <PriceDisplay amount={product.price} size="md" />
                       <div className="text-sm text-gray-400">شامل الضريبة</div>
                     </div>
                   )}
@@ -318,26 +346,14 @@ export function ProductCard({ product, viewMode = "grid" }: ProductCardProps) {
           <div className="flex items-center justify-between pt-4 border-t border-white/20">
             <div>
               {product.hasDiscount && product.discountedPrice ? (
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold text-green-400">
-                      {product.discountedPrice.toLocaleString('ar-SA')} ر.س
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-400 line-through">
-                      {product.price.toLocaleString('ar-SA')} ر.س
-                    </span>
-                    <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full font-medium">
-                      وفر {discountPercentage}%
-                    </span>
-                  </div>
-                </div>
+                <DiscountPrice 
+                  amount={product.discountedPrice}
+                  originalAmount={product.price}
+                  showSavings={true}
+                />
               ) : (
                 <div>
-                  <span className="text-2xl font-bold text-white">
-                    {product.price.toLocaleString('ar-SA')} ر.س
-                  </span>
+                  <PriceDisplay amount={product.price} size="md" />
                   <div className="text-sm text-gray-400">شامل الضريبة</div>
                 </div>
               )}

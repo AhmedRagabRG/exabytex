@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { 
@@ -203,11 +204,14 @@ export function ProcessSteps() {
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link href="/contact">
             <Button size="lg" className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white px-8 py-4 text-lg font-semibold rounded-full shadow-2xl hover:shadow-cyan-500/25 transition-all duration-300 transform hover:scale-105">
               <MessageSquare className="ml-2 h-5 w-5" />
               احجز استشارة مجانية
               <ArrowLeft className="mr-2 h-5 w-5" />
             </Button>
+            </Link>
+            <Link href="/store">
             <Button 
               variant="outline" 
               size="lg" 
@@ -215,6 +219,7 @@ export function ProcessSteps() {
             >
               شاهد أعمالنا السابقة
             </Button>
+            </Link>
           </div>
         </div>
       </div>

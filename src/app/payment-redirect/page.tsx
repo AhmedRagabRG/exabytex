@@ -116,7 +116,7 @@ function PaymentRedirectContent() {
       </div>
     </div>
   );
-}
+} 
 
 export default function PaymentRedirectPage() {
   return (

@@ -31,12 +31,22 @@ export async function PATCH(
       return NextResponse.json({ error: "المستخدم غير موجود" }, { status: 404 })
     }
 
+    // Check if cart item exists and belongs to user
+    const existingCartItem = await prisma.cartItem.findUnique({
+      where: { id: resolvedParams.id }
+    })
+
+    if (!existingCartItem) {
+      return NextResponse.json({ error: "عنصر السلة غير موجود" }, { status: 404 })
+    }
+
+    if (existingCartItem.userId !== user.id) {
+      return NextResponse.json({ error: "غير مصرح بتحديث هذا العنصر" }, { status: 403 })
+    }
+
     // Update cart item
     const cartItem = await prisma.cartItem.update({
-      where: { 
-        id: resolvedParams.id,
-        userId: user.id // Ensure user owns this cart item
-      },
+      where: { id: resolvedParams.id },
       data: { quantity },
       include: { product: true }
     })
@@ -51,6 +61,7 @@ export async function PATCH(
     }
 
     return NextResponse.json({ 
+      success: true,
       message: "تم تحديث الكمية",
       cartItem: formattedCartItem 
     })
@@ -67,7 +78,7 @@ export async function DELETE(
 ) {
   const resolvedParams = await params
   try {
-        const session = await getServerSession(authOptions) as Session
+    const session = await getServerSession(authOptions) as Session
 
     if (!session?.user?.email) {
       return NextResponse.json({ error: "غير مصرح" }, { status: 401 })
@@ -81,15 +92,25 @@ export async function DELETE(
       return NextResponse.json({ error: "المستخدم غير موجود" }, { status: 404 })
     }
 
-    // Delete cart item
-    await prisma.cartItem.delete({
-      where: { 
-        id: resolvedParams.id,
-        userId: user.id // Ensure user owns this cart item
-      }
+    // First check if the cart item exists and belongs to the user
+    const cartItem = await prisma.cartItem.findUnique({
+      where: { id: resolvedParams.id }
     })
 
-    return NextResponse.json({ message: "تم حذف المنتج من السلة" })
+    if (!cartItem) {
+      return NextResponse.json({ error: "عنصر السلة غير موجود" }, { status: 404 })
+    }
+
+    if (cartItem.userId !== user.id) {
+      return NextResponse.json({ error: "غير مصرح بحذف هذا العنصر" }, { status: 403 })
+    }
+
+    // Delete cart item
+    await prisma.cartItem.delete({
+      where: { id: resolvedParams.id }
+    })
+
+    return NextResponse.json({ success: true, message: "تم حذف المنتج من السلة" })
   } catch (error) {
     console.error("Delete cart item error:", error)
     return NextResponse.json({ error: "حدث خطأ في الخادم" }, { status: 500 })

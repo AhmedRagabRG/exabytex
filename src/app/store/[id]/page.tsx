@@ -25,6 +25,7 @@ import { ProductImage } from "./components/ProductImage"
 import { AddToCartButton } from "./components/AddToCartButton"
 import { SimpleActionButtons } from "./components/SimpleActionButtons"
 import { ProductReviewsSection } from "./components/ProductReviewsSection"
+import { PriceDisplay, DiscountPrice } from '@/components/ui/PriceDisplay'
 
 // Product interface
 interface Product {
@@ -223,43 +224,31 @@ export default async function ProductPage({ params }: ProductPageProps) {
               {/* Price */}
               <div className="mb-8">
                 {product.hasDiscount && product.discountedPrice ? (
-                  <div className="space-y-3">
-                    {/* Discount Badge */}
-                    <div className="flex items-center gap-2">
-                      <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0 animate-pulse">
-                        <Tag className="w-3 h-3 ml-1" />
-                        خصم {Math.round(((product.price - product.discountedPrice) / product.price) * 100)}%
-                      </Badge>
-                      <span className="text-sm text-green-400 font-medium">
-                        وفر {(product.price - product.discountedPrice).toLocaleString('ar-SA')} ر.س
-                      </span>
-                    </div>
-                    
-                    {/* Prices */}
-                    <div className="flex items-center space-x-4 rtl:space-x-reverse">
-                      <span className="text-4xl font-bold text-green-400">
-                        {product.discountedPrice.toLocaleString('ar-SA')} ر.س
-                      </span>
-                      <span className="text-2xl text-gray-400 line-through">
-                        {product.price.toLocaleString('ar-SA')} ر.س
-                      </span>
-                    </div>
+                  <div className="space-y-4">
+                    <DiscountPrice 
+                      amount={product.discountedPrice}
+                      originalAmount={product.price}
+                      showSavings={true}
+                      className="space-y-3"
+                    />
                     
                     {/* Savings Highlight */}
                     <div className="p-4 rounded-lg bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20">
                       <div className="flex items-center gap-2 text-green-400">
                         <Sparkles className="h-4 w-4" />
                         <span className="font-bold">
-                          توفير فوري {(product.price - product.discountedPrice).toLocaleString('ar-SA')} ر.س من السعر الأصلي!
+                          توفير فوري من السعر الأصلي!
                         </span>
                       </div>
                     </div>
                   </div>
                 ) : (
                   <div className="flex items-center space-x-4 rtl:space-x-reverse">
-                    <span className="text-4xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-                      {product.price.toLocaleString('ar-SA')} ر.س
-                    </span>
+                    <PriceDisplay 
+                      amount={product.price} 
+                      size="lg" 
+                      className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent"
+                    />
                   </div>
                 )}
                 <p className="text-gray-400 mt-2">شامل جميع التحديثات والدعم الفني</p>

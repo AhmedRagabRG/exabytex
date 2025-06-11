@@ -98,7 +98,8 @@ export default function WishlistTab({ onGoToProducts }: WishlistTabProps) {
       })
       const data = await response.json()
 
-      if (data.success) {
+      if (response.ok && data.success) {
+        window.dispatchEvent(new CustomEvent('cartUpdated'))
         toast.success('تم إضافة المنتج للسلة')
       } else {
         toast.error(data.error || 'فشل في إضافة المنتج للسلة')

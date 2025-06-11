@@ -26,23 +26,25 @@ export async function getAllPosts(): Promise<BlogPost[]> {
       }
     })
 
-    return posts.map(post => ({
-      id: post.id,
-      slug: post.slug,
-      title: post.title,
-      content: post.content,
-      excerpt: post.excerpt,
-      coverImage: post.coverImage || '/api/placeholder/800/400',
-      author: {
-        name: post.author?.name || post.authorName || 'كاتب مجهول',
-        email: post.author?.email || '',
-        image: post.author?.image || post.authorAvatar || '/api/placeholder/100/100',
-        role: post.author?.role || 'USER'
-      },
-      tags: JSON.parse(post.tags || '[]'),
-      publishedAt: new Date(post.publishedAt || post.createdAt),
-      featured: post.featured || false,
-    })) as BlogPost[]
+    return posts
+      .filter(post => (post as any).isVisible !== false)
+      .map(post => ({
+        id: post.id,
+        slug: post.slug,
+        title: post.title,
+        content: post.content,
+        excerpt: post.excerpt,
+        coverImage: post.coverImage || '/api/placeholder/800/400',
+        author: {
+          name: post.author?.name || post.authorName || 'كاتب مجهول',
+          email: post.author?.email || '',
+          image: post.author?.image || post.authorAvatar || '/api/placeholder/100/100',
+          role: post.author?.role || 'USER'
+        },
+        tags: JSON.parse(post.tags || '[]'),
+        publishedAt: new Date(post.publishedAt || post.createdAt),
+        featured: post.featured || false,
+      })) as BlogPost[]
   } catch (error) {
     console.error('Error reading posts from database:', error)
     return []
@@ -53,28 +55,21 @@ export async function getAllPosts(): Promise<BlogPost[]> {
 
 export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
   try {
-    const post = await prisma.blogPost.findFirst({
-      where: {
-        slug: slug,
-        status: 'PUBLISHED',
-        published: true
-      },
-      include: {
-        author: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            image: true,
-            role: true
-          }
-        }
-      }
+    const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/blogs?slug=${slug}`, {
+      cache: 'no-store'
     })
-
-    if (!post) {
+    
+    if (!response.ok) {
       return null
     }
+    
+    const data = await response.json()
+    
+    if (!data.success || !data.post) {
+      return null
+    }
+
+    const post = data.post
 
     return {
       id: post.id,
@@ -89,15 +84,13 @@ export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
         image: post.author?.image || post.authorAvatar || '/api/placeholder/100/100',
         role: post.author?.role || 'USER'
       },
-      tags: JSON.parse(post.tags || '[]'),
+      tags: post.tags || [],
       publishedAt: new Date(post.publishedAt || post.createdAt),
       featured: post.featured || false,
     } as BlogPost
   } catch (error) {
-    console.error('Error reading post from database:', error)
+    console.error('Error reading post:', error)
     return null
-  } finally {
-    await prisma.$disconnect()
   }
 }
 
@@ -132,23 +125,25 @@ export async function getFeaturedPosts(): Promise<BlogPost[]> {
       take: 3
     })
 
-    return posts.map(post => ({
-      id: post.id,
-      slug: post.slug,
-      title: post.title,
-      content: post.content,
-      excerpt: post.excerpt,
-      coverImage: post.coverImage || '/api/placeholder/800/400',
-      author: {
-        name: post.author?.name || post.authorName || 'كاتب مجهول',
-        email: post.author?.email || '',
-        image: post.author?.image || post.authorAvatar || '/api/placeholder/100/100',
-        role: post.author?.role || 'USER'
-      },
-      tags: JSON.parse(post.tags || '[]'),
-      publishedAt: new Date(post.publishedAt || post.createdAt),
-      featured: post.featured || false,
-    })) as BlogPost[]
+    return posts
+      .filter(post => (post as any).isVisible !== false)
+      .map(post => ({
+        id: post.id,
+        slug: post.slug,
+        title: post.title,
+        content: post.content,
+        excerpt: post.excerpt,
+        coverImage: post.coverImage || '/api/placeholder/800/400',
+        author: {
+          name: post.author?.name || post.authorName || 'كاتب مجهول',
+          email: post.author?.email || '',
+          image: post.author?.image || post.authorAvatar || '/api/placeholder/100/100',
+          role: post.author?.role || 'USER'
+        },
+        tags: JSON.parse(post.tags || '[]'),
+        publishedAt: new Date(post.publishedAt || post.createdAt),
+        featured: post.featured || false,
+      })) as BlogPost[]
   } catch (error) {
     console.error('Error reading featured posts:', error)
     return []
@@ -183,23 +178,25 @@ export async function getPostsByTag(tag: string): Promise<BlogPost[]> {
       }
     })
 
-    return posts.map(post => ({
-      id: post.id,
-      slug: post.slug,
-      title: post.title,
-      content: post.content,
-      excerpt: post.excerpt,
-      coverImage: post.coverImage || '/api/placeholder/800/400',
-      author: {
-        name: post.author?.name || post.authorName || 'كاتب مجهول',
-        email: post.author?.email || '',
-        image: post.author?.image || post.authorAvatar || '/api/placeholder/100/100',
-        role: post.author?.role || 'USER'
-      },
-      tags: JSON.parse(post.tags || '[]'),
-      publishedAt: new Date(post.publishedAt || post.createdAt),
-      featured: post.featured || false,
-    })) as BlogPost[]
+    return posts
+      .filter(post => (post as any).isVisible !== false)
+      .map(post => ({
+        id: post.id,
+        slug: post.slug,
+        title: post.title,
+        content: post.content,
+        excerpt: post.excerpt,
+        coverImage: post.coverImage || '/api/placeholder/800/400',
+        author: {
+          name: post.author?.name || post.authorName || 'كاتب مجهول',
+          email: post.author?.email || '',
+          image: post.author?.image || post.authorAvatar || '/api/placeholder/100/100',
+          role: post.author?.role || 'USER'
+        },
+        tags: JSON.parse(post.tags || '[]'),
+        publishedAt: new Date(post.publishedAt || post.createdAt),
+        featured: post.featured || false,
+      })) as BlogPost[]
   } catch (error) {
     console.error('Error reading posts by tag:', error)
     return []

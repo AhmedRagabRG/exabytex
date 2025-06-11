@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   User,
@@ -30,6 +32,12 @@ import {
   FileText,
   Tag,
   Activity,
+  Coins,
+  Plus,
+  Minus,
+  Wallet,
+  History,
+  Zap,
 } from "lucide-react";
 import { DateDisplay } from "@/components/ui/date-display";
 import ProductManagement from "@/components/admin/ProductManagement";
@@ -41,6 +49,8 @@ import WishlistTab from "@/components/dashboard/WishlistTab";
 import ProfileTab from "@/components/dashboard/ProfileTab";
 import { toast } from "sonner";
 import { HomeServicesManager } from "@/components/dashboard/home-services-manager";
+import { CurrencySettings } from "@/components/CurrencySettings";
+import CoinsTab from "@/components/dashboard/CoinsTab";
 
 interface UserData {
   id: string;
@@ -73,6 +83,7 @@ export default function DashboardPage() {
     | "overview"
     | "orders"
     | "saved"
+    | "coins"
     | "profile"
     | "products"
     | "categories"
@@ -80,10 +91,23 @@ export default function DashboardPage() {
     | "blog-management"
     | "home-services"
     | "featured-blogs"
+    | "currency-settings"
   >("overview");
   const [userData, setUserData] = useState<UserData | null>(null);
-  const [dashboardData, setDashboardData] = useState<DashboardStats | null>(null);
+  const [, setDashboardData] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Check for tab parameter in URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    if (tabParam) {
+      const validTabs = ["overview", "orders", "saved", "coins", "profile", "products", "categories", "promo-codes", "blog-management", "home-services", "featured-blogs", "currency-settings"];
+      if (validTabs.includes(tabParam)) {
+        setActiveTab(tabParam as any);
+      }
+    }
+  }, []);
 
   // Handle button clicks
   const handleTabChange = (
@@ -91,6 +115,7 @@ export default function DashboardPage() {
       | "overview"
       | "orders"
       | "saved"
+      | "coins"
       | "profile"
       | "products"
       | "categories"
@@ -98,6 +123,7 @@ export default function DashboardPage() {
       | "blog-management"
       | "home-services"
       | "featured-blogs"
+      | "currency-settings"
   ) => {
     setActiveTab(tab);
   };
@@ -257,6 +283,18 @@ export default function DashboardPage() {
             </button>
 
             <button
+              onClick={() => handleTabChange("coins")}
+              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+                activeTab === "coins"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              <Coins className="h-4 w-4 inline ml-2" />
+              العملة
+            </button>
+
+            <button
               onClick={() => handleTabChange("profile")}
               className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
                 activeTab === "profile"
@@ -330,6 +368,18 @@ export default function DashboardPage() {
                   <Settings className="h-4 w-4 inline ml-2" />
                   إدارة الخدمات
                 </button>
+
+                <button
+                  onClick={() => handleTabChange("currency-settings")}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+                    activeTab === "currency-settings"
+                      ? "border-blue-500 text-blue-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                >
+                  <CreditCard className="h-4 w-4 inline ml-2" />
+                  إعدادات العملة
+                </button>
               </>
             )}
           </nav>
@@ -351,6 +401,9 @@ export default function DashboardPage() {
         {activeTab === "saved" && (
           <WishlistTab onGoToProducts={handleGoToProducts} />
         )}
+        {activeTab === "coins" && (
+          <CoinsTab />
+        )}
         {activeTab === "profile" && (
           <ProfileTab user={userData} onProfileUpdate={handleProfileUpdate} />
         )}
@@ -359,6 +412,15 @@ export default function DashboardPage() {
         {(isManager || isAdmin) && activeTab === "promo-codes" && <PromoCodeManagement />}
         {(isManager || isAdmin) && activeTab === "blog-management" && <BlogManagement />}
         {(isManager || isAdmin) && activeTab === "home-services" && <HomeServicesManager />}
+        {(isManager || isAdmin) && activeTab === "currency-settings" && (
+          <div>
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">إعدادات العملة</h2>
+              <p className="text-gray-600">إدارة العملة الافتراضية للموقع وطريقة عرض الأسعار</p>
+            </div>
+            <CurrencySettings />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -375,6 +437,7 @@ function OverviewTab({
       | "overview"
       | "orders"
       | "saved"
+      | "coins"
       | "profile"
       | "products"
       | "categories"

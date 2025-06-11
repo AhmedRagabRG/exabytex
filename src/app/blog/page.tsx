@@ -18,7 +18,8 @@ import {
   Eye,
   BookOpen,
   TrendingUp,
-  Star
+  Star,
+  Edit
 } from 'lucide-react';
 
 interface Blog {
@@ -85,6 +86,18 @@ export default function BlogPage() {
 
   const featuredBlogs = filteredBlogs.filter(blog => blog.featured).slice(0, 3);
   const regularBlogs = filteredBlogs.filter(blog => !blog.featured);
+
+  // Helper function to check if user can edit a blog
+  const canEditBlog = (blog: Blog) => {
+    if (!session?.user?.email) return false;
+    
+    // Admin or Manager can edit any blog
+    const userRole = (session.user as any)?.role;
+    if (userRole === 'ADMIN' || userRole === 'MANAGER') return true;
+    
+    // Author can edit their own blog
+    return blog.author.email === session.user.email;
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white">
@@ -221,12 +234,22 @@ export default function BlogPage() {
                           {new Date(blog.publishedAt).toLocaleDateString('ar-SA')}
                         </div>
                       </div>
-                      <Link href={`/blog/${blog.slug}`}>
-                        <Button variant="ghost" size="sm" className="text-blue-400 hover:text-blue-300">
-                          <Eye className="h-4 w-4 ml-1" />
-                          قراءة
-                        </Button>
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        {canEditBlog(blog) && (
+                          <Link href={`/blog/edit/${blog.id}`}>
+                            <Button variant="ghost" size="sm" className="text-blue-400 hover:text-blue-300">
+                              <Edit className="h-4 w-4 ml-1" />
+                              تعديل
+                            </Button>
+                          </Link>
+                        )}
+                        <Link href={`/blog/${blog.slug}`}>
+                          <Button variant="ghost" size="sm" className="text-blue-400 hover:text-blue-300">
+                            <Eye className="h-4 w-4 ml-1" />
+                            قراءة
+                          </Button>
+                        </Link>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -320,11 +343,20 @@ export default function BlogPage() {
                           {new Date(blog.publishedAt).toLocaleDateString('ar-SA')}
                         </div>
                       </div>
-                      <Link href={`/blog/${blog.slug}`}>
-                        <Button variant="ghost" size="sm" className="text-blue-400 hover:text-blue-300 p-2">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </Link>
+                      <div className="flex items-center gap-1">
+                        {canEditBlog(blog) && (
+                          <Link href={`/blog/edit/${blog.id}`}>
+                            <Button variant="ghost" size="sm" className="text-blue-400 hover:text-blue-300 p-2">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                        )}
+                        <Link href={`/blog/${blog.slug}`}>
+                          <Button variant="ghost" size="sm" className="text-blue-400 hover:text-blue-300 p-2">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

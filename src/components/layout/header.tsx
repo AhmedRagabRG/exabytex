@@ -16,7 +16,9 @@ import {
   Zap,
   Rocket,
   Bot,
-  Globe
+  Globe,
+  Coins,
+  Settings
 } from "lucide-react"
 import { NoSSR } from "@/components/no-ssr"
 
@@ -24,7 +26,7 @@ export function Header() {
   const [isOpen, setIsOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
   const { data: session } = useSession()
-  const { items } = useCart()
+  const { items = [] } = useCart()
 
   useEffect(() => {
     const handleScroll = () => {
@@ -54,6 +56,12 @@ export function Header() {
       href: "/store", 
       icon: Rocket,
       gradient: "from-green-500 to-emerald-500" 
+    },
+    { 
+      name: "مولد المحتوى", 
+      href: "/ai-content", 
+      icon: Brain,
+      gradient: "from-orange-500 to-red-500" 
     },
     { 
       name: "المدونة", 
@@ -151,6 +159,7 @@ export function Header() {
 
           {/* Desktop Actions */}
           <div className="hidden lg:flex items-center space-x-3 rtl:space-x-reverse">
+            {/* Coins Link for Logged In Users */}
             {/* Cart Icon with Badge */}
             <NoSSR fallback={
               <Button variant="ghost" size="icon" className="relative hover:bg-white/10 transition-colors">
@@ -266,19 +275,25 @@ export function Header() {
               <div className="pt-4 mt-4 border-t border-white/10">
                 <NoSSR>
                   {session ? (
-                    <div className="space-y-3">
-                      <Link href="/cart" onClick={() => setIsOpen(false)}>
-                        <Button variant="outline" className="w-full flex items-center justify-center space-x-2 rtl:space-x-reverse border-white/30 text-gray-300 hover:bg-white hover:text-slate-900 transition-all duration-300">
-                          <ShoppingCart className="h-4 w-4" />
-                          <span>السلة ({items.length})</span>
-                        </Button>
-                      </Link>
-                      <Link href="/dashboard" onClick={() => setIsOpen(false)}>
-                        <Button variant="outline" className="w-full border-white/30 text-gray-300 hover:bg-white hover:text-slate-900 transition-all duration-300">
-                          <User className="h-4 w-4 ml-2" />
-                          لوحة التحكم
-                        </Button>
-                      </Link>
+                                      <div className="space-y-3">
+                    <Link href="/coins" onClick={() => setIsOpen(false)}>
+                      <Button variant="outline" className="w-full flex items-center justify-center space-x-2 rtl:space-x-reverse border-yellow-500/30 text-yellow-400 hover:bg-yellow-500 hover:text-white transition-all duration-300">
+                        <Coins className="h-4 w-4" />
+                        <span>متجر الكوينز</span>
+                      </Button>
+                    </Link>
+                    <Link href="/cart" onClick={() => setIsOpen(false)}>
+                      <Button variant="outline" className="w-full flex items-center justify-center space-x-2 rtl:space-x-reverse border-white/30 text-gray-300 hover:bg-white hover:text-slate-900 transition-all duration-300">
+                        <ShoppingCart className="h-4 w-4" />
+                        <span>السلة ({items.length})</span>
+                      </Button>
+                    </Link>
+                    <Link href="/dashboard" onClick={() => setIsOpen(false)}>
+                      <Button variant="outline" className="w-full border-white/30 text-gray-300 hover:bg-white hover:text-slate-900 transition-all duration-300">
+                        <User className="h-4 w-4 ml-2" />
+                        لوحة التحكم
+                      </Button>
+                    </Link>
                       <Button 
                         variant="outline" 
                         className="w-full border-red-500/50 text-red-400 hover:bg-red-500 hover:text-white transition-all duration-300"

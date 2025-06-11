@@ -74,7 +74,7 @@ export default function ContactPage() {
     {
       icon: Phone,
       title: "اتصل بنا",
-      value: "+201555831761",
+      value: "201555831761+",
       description: "متاح على مدار الساعة",
       gradient: "from-blue-500 to-cyan-500",
       bgGradient: "from-blue-50 to-cyan-50"
@@ -87,22 +87,6 @@ export default function ContactPage() {
       gradient: "from-purple-500 to-pink-500",
       bgGradient: "from-purple-50 to-pink-50"
     },
-    {
-      icon: MapPin,
-      title: "زرنا",
-      value: "القاهرة، الشيخ زايد",
-      description: "مصر الجديدة",
-      gradient: "from-green-500 to-emerald-500",
-      bgGradient: "from-green-50 to-emerald-50"
-    },
-    {
-      icon: Clock,
-      title: "ساعات العمل",
-      value: "أحد - خميس",
-      description: "9:00 ص - 6:00 م",
-      gradient: "from-orange-500 to-red-500",
-      bgGradient: "from-orange-50 to-red-50"
-    }
   ]
 
   const services = [

@@ -11,7 +11,11 @@ export async function GET() {
   try {
     const products = await prisma.product.findMany({
       where: {
-        isActive: true
+        isActive: true,
+        // إخفاء منتجات الكوينز من المتجر
+        NOT: {
+          category: 'Digital Currency'
+        }
       },
       include: {
         createdBy: {
@@ -38,9 +42,22 @@ export async function GET() {
         ? (ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length).toFixed(1)
         : 0;
       
+      // معالجة آمنة لـ features
+      let parsedFeatures = [];
+      try {
+        parsedFeatures = JSON.parse(product.features || '[]');
+      } catch (error) {
+        // إذا لم يكن JSON صحيح، تحويل النص إلى array
+        if (product.features && typeof product.features === 'string') {
+          parsedFeatures = [product.features];
+        } else {
+          parsedFeatures = [];
+        }
+      }
+      
       return {
         ...product,
-        features: JSON.parse(product.features || '[]'),
+        features: parsedFeatures,
         averageRating: parseFloat(averageRating.toString()),
         reviewCount: ratings.length
       };

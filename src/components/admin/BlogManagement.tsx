@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,7 +19,10 @@ import {
   CheckCircle,
   XCircle,
   AlertTriangle,
-  Trash2
+  Trash2,
+  EyeOff,
+  Edit,
+  Save
 } from 'lucide-react';
 
 interface Blog {
@@ -31,6 +35,7 @@ interface Blog {
   tags: string[];
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'PUBLISHED';
   published: boolean;
+  isVisible?: boolean;
   publishedAt?: string;
   rejectionReason?: string;
   createdAt: string;
@@ -51,6 +56,7 @@ interface Blog {
 }
 
 export function BlogManagement() {
+  const { data: session } = useSession();
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'PUBLISHED'>('ALL');
@@ -59,6 +65,26 @@ export function BlogManagement() {
   const [rejectionReason, setRejectionReason] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<Blog | null>(null);
+  const [editingBlog, setEditingBlog] = useState<Blog | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    title: '',
+    content: '',
+    excerpt: '',
+    tags: [] as string[],
+    coverImage: ''
+  });
+
+  // Helper function to check if user can edit a blog
+  const canEditBlog = (blog: Blog) => {
+    if (!session?.user?.email) return false;
+    
+    // Admin or Manager can edit any blog
+    const userRole = (session.user as any)?.role;
+    if (userRole === 'ADMIN' || userRole === 'MANAGER') return true;
+    
+    // Author can edit their own blog
+    return blog.author.email === session.user.email;
+  };
 
   useEffect(() => {
     fetchBlogs();
@@ -68,7 +94,7 @@ export function BlogManagement() {
     setLoading(true);
     try {
       console.log('🔄 Starting to fetch blogs with filter:', filter);
-      const url = `/api/blogs?status=${filter}&limit=50`;
+      const url = `/api/blogs?status=${filter}&limit=50&admin=true`;
       console.log('📡 Fetching URL:', url);
       
       const response = await fetch(url);
@@ -166,6 +192,98 @@ export function BlogManagement() {
     } finally {
       setActionLoading(null);
     }
+  };
+
+  const toggleVisibility = async (blogId: string, currentVisibility: boolean) => {
+    setActionLoading(blogId);
+    try {
+      const response = await fetch(`/api/blogs/${blogId}/visibility`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          isVisible: !currentVisibility
+        }),
+      });
+
+      if (response.ok) {
+        // تحديث القائمة
+        fetchBlogs();
+        
+        // إشعار نجاح
+        const message = !currentVisibility ? 'تم إظهار المقال في الموقع!' : 'تم إخفاء المقال من الموقع!';
+        showNotification(message, 'success');
+      } else {
+        const error = await response.json();
+        showNotification(error.error || 'حدث خطأ في تغيير إعدادات العرض', 'error');
+      }
+    } catch (error) {
+      console.log(error)
+      showNotification('خطأ في الاتصال بالسيرفر', 'error');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleEditClick = (blog: Blog) => {
+    setEditingBlog(blog);
+    setEditFormData({
+      title: blog.title,
+      content: blog.content,
+      excerpt: blog.excerpt,
+      tags: blog.tags,
+      coverImage: blog.coverImage || ''
+    });
+  };
+
+  const handleEditSave = async () => {
+    if (!editingBlog) return;
+    
+    setActionLoading(editingBlog.id);
+    try {
+      const response = await fetch(`/api/blogs/${editingBlog.id}/edit`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editFormData),
+      });
+
+      if (response.ok) {
+        // تحديث القائمة
+        fetchBlogs();
+        setEditingBlog(null);
+        setEditFormData({
+          title: '',
+          content: '',
+          excerpt: '',
+          tags: [],
+          coverImage: ''
+        });
+        
+        showNotification('تم تحديث المقال بنجاح!', 'success');
+      } else {
+        const error = await response.json();
+        showNotification(error.error || 'حدث خطأ في التحديث', 'error');
+      }
+    } catch (error) {
+      console.log(error)
+      showNotification('خطأ في الاتصال بالسيرفر', 'error');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleEditCancel = () => {
+    setEditingBlog(null);
+    setEditFormData({
+      title: '',
+      content: '',
+      excerpt: '',
+      tags: [],
+      coverImage: ''
+    });
   };
 
   const showNotification = (message: string, type: 'success' | 'error') => {
@@ -338,6 +456,29 @@ export function BlogManagement() {
                           {blog.status === 'REJECTED' && 'مرفوض'}
                           {blog.status === 'PUBLISHED' && 'منشور'}
                         </Badge>
+                        
+                        {/* مؤشر حالة الرؤية للمقالات المنشورة */}
+                        {blog.status === 'PUBLISHED' && (
+                          <Badge 
+                            className={`flex items-center gap-1 ${
+                              blog.isVisible 
+                                ? 'bg-green-100 text-green-800 border-green-200' 
+                                : 'bg-gray-100 text-gray-800 border-gray-200'
+                            }`}
+                          >
+                            {blog.isVisible ? (
+                              <>
+                                <Eye className="h-3 w-3" />
+                                مرئي
+                              </>
+                            ) : (
+                              <>
+                                <EyeOff className="h-3 w-3" />
+                                مخفي
+                              </>
+                            )}
+                          </Badge>
+                        )}
                       </div>
                     </div>
 
@@ -392,6 +533,48 @@ export function BlogManagement() {
                           <Eye className="h-4 w-4 ml-1" />
                           معاينة
                         </Button>
+
+                        {/* زر التعديل */}
+                        {canEditBlog(blog) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditClick(blog)}
+                            className="border-blue-300 text-blue-600 hover:bg-blue-50"
+                          >
+                            <Edit className="h-4 w-4 ml-1" />
+                            تعديل
+                          </Button>
+                        )}
+
+                        {/* زر التحكم في الرؤية - فقط للمقالات المنشورة */}
+                        {blog.status === 'PUBLISHED' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => toggleVisibility(blog.id, blog.isVisible ?? true)}
+                            disabled={actionLoading === blog.id}
+                            className={`${
+                              blog.isVisible 
+                                ? 'border-orange-300 text-orange-600 hover:bg-orange-50' 
+                                : 'border-green-300 text-green-600 hover:bg-green-50'
+                            }`}
+                            title={blog.isVisible ? 'إخفاء من الموقع' : 'إظهار في الموقع'}
+                          >
+                            {actionLoading === blog.id ? (
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                            ) : (
+                              <>
+                                {blog.isVisible ? (
+                                  <EyeOff className="h-4 w-4 ml-1" />
+                                ) : (
+                                  <Eye className="h-4 w-4 ml-1" />
+                                )}
+                                {blog.isVisible ? 'إخفاء' : 'إظهار'}
+                              </>
+                            )}
+                          </Button>
+                        )}
 
                         {blog.status === 'PENDING' && (
                           <>
@@ -546,7 +729,7 @@ export function BlogManagement() {
             <div className="p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">تأكيد الحذف</h3>
               <p className="text-gray-600 mb-6">
-                هل أنت متأكد من حذف مقال ${deleteConfirm.title}؟ هذا الإجراء لا يمكن التراجع عنه.
+                هل أنت متأكد من حذف مقال "${deleteConfirm.title}"؟ هذا الإجراء لا يمكن التراجع عنه.
               </p>
               <div className="flex gap-3">
                 <Button
@@ -568,6 +751,144 @@ export function BlogManagement() {
                 >
                   إلغاء
                 </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal التعديل */}
+      {editingBlog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b p-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-gray-900">تعديل المقال</h2>
+                <button
+                  onClick={handleEditCancel}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <div className="space-y-6">
+                {/* العنوان */}
+                <div>
+                  <label htmlFor="edit-title" className="block text-sm font-medium text-gray-700 mb-2">
+                    عنوان المقال
+                  </label>
+                  <input
+                    id="edit-title"
+                    type="text"
+                    value={editFormData.title}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, title: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="اكتب عنوان المقال..."
+                  />
+                </div>
+
+                {/* الملخص */}
+                <div>
+                  <label htmlFor="edit-excerpt" className="block text-sm font-medium text-gray-700 mb-2">
+                    ملخص المقال
+                  </label>
+                  <textarea
+                    id="edit-excerpt"
+                    value={editFormData.excerpt}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, excerpt: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    rows={3}
+                    placeholder="اكتب ملخص المقال..."
+                  />
+                </div>
+
+                {/* صورة الغلاف */}
+                <div>
+                  <label htmlFor="edit-cover" className="block text-sm font-medium text-gray-700 mb-2">
+                    رابط صورة الغلاف (اختياري)
+                  </label>
+                  <input
+                    id="edit-cover"
+                    type="url"
+                    value={editFormData.coverImage}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, coverImage: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="https://example.com/image.jpg"
+                  />
+                </div>
+
+                {/* العلامات */}
+                <div>
+                  <label htmlFor="edit-tags" className="block text-sm font-medium text-gray-700 mb-2">
+                    العلامات (منفصلة بفواصل)
+                  </label>
+                  <input
+                    id="edit-tags"
+                    type="text"
+                    value={editFormData.tags.join(', ')}
+                    onChange={(e) => setEditFormData(prev => ({ 
+                      ...prev, 
+                      tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="تقنية, برمجة, ذكاء اصطناعي"
+                  />
+                </div>
+
+                {/* المحتوى */}
+                <div>
+                  <label htmlFor="edit-content" className="block text-sm font-medium text-gray-700 mb-2">
+                    محتوى المقال
+                  </label>
+                  <textarea
+                    id="edit-content"
+                    value={editFormData.content}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, content: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    rows={12}
+                    placeholder="اكتب محتوى المقال بتنسيق HTML..."
+                  />
+                </div>
+
+                {/* معلومات المقال */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-gray-900 mb-2">معلومات المقال</h4>
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <p>الكاتب: {editingBlog.author.name}</p>
+                    <p>تاريخ الإنشاء: {new Date(editingBlog.createdAt).toLocaleDateString('ar-EG')}</p>
+                    <p>الحالة: {editingBlog.status}</p>
+                    {editingBlog.publishedAt && (
+                      <p>تاريخ النشر: {new Date(editingBlog.publishedAt).toLocaleDateString('ar-EG')}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* أزرار الحفظ والإلغاء */}
+                <div className="flex gap-3 pt-4 border-t">
+                  <Button
+                    onClick={handleEditSave}
+                    disabled={actionLoading === editingBlog.id || !editFormData.title.trim() || !editFormData.content.trim() || !editFormData.excerpt.trim()}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    {actionLoading === editingBlog.id ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    ) : (
+                      <Save className="h-4 w-4 mr-2" />
+                    )}
+                    حفظ التغييرات
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    onClick={handleEditCancel}
+                    className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                  >
+                    إلغاء
+                  </Button>
+                </div>
               </div>
             </div>
           </div>

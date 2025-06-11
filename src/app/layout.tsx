@@ -5,6 +5,7 @@ import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { AuthProvider } from "@/components/providers/auth-provider";
 import { CartProvider } from "@/components/providers/cart-provider";
+import { CurrencyProvider } from "@/contexts/CurrencyContext";
 
 const cairo = Cairo({
   subsets: ["arabic", "latin"],
@@ -42,9 +43,11 @@ export default function RootLayout({
       >
         <AuthProvider>
           <CartProvider>
-            <Header />
-            <main>{children}</main>
-            <Footer />
+            <CurrencyProvider>
+              <Header />
+              <main>{children}</main>
+              <Footer />
+            </CurrencyProvider>
           </CartProvider>
         </AuthProvider>
       </body>

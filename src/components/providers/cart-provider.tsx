@@ -4,19 +4,18 @@ import React, { createContext, useContext, useReducer, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 
 interface CartItem {
-  id: string
-  productId: string
+  id: string // cart item ID
+  productId: string // product ID
+  name: string
+  price: number
   quantity: number
-  product: {
-    id: string
-    title: string
-    description: string
-    price: number
-    image?: string
-    category: string
-    features: string[]
-    isPopular?: boolean
-  }
+  image?: string
+  category: string
+  description: string
+  type: string
+  hasDiscount?: boolean
+  discountedPrice?: number
+  features?: string
 }
 
 interface CartState {
@@ -49,26 +48,18 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
       return { ...state, isLoading: action.payload }
     
     case 'SET_CART':
-      return {
-        ...state,
-        items: action.payload.items,
-        total: action.payload.total,
-        isLoading: false
-      }
+      return { ...state, ...action.payload, isLoading: false }
     
     case 'ADD_ITEM': {
-      const existingItemIndex = state.items.findIndex(
-        item => item.productId === action.payload.productId
-      )
-      
+      const existingItemIndex = state.items.findIndex(item => item.id === action.payload.id)
       if (existingItemIndex >= 0) {
         const updatedItems = [...state.items]
         updatedItems[existingItemIndex].quantity += action.payload.quantity
-        const total = updatedItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0)
+        const total = updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
         return { ...state, items: updatedItems, total }
       } else {
         const updatedItems = [...state.items, action.payload]
-        const total = updatedItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0)
+        const total = updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
         return { ...state, items: updatedItems, total }
       }
     }
@@ -79,13 +70,13 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
           ? { ...item, quantity: action.payload.quantity }
           : item
       )
-      const total = updatedItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0)
+      const total = updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
       return { ...state, items: updatedItems, total }
     }
     
     case 'REMOVE_ITEM': {
       const updatedItems = state.items.filter(item => item.id !== action.payload)
-      const total = updatedItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0)
+      const total = updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
       return { ...state, items: updatedItems, total }
     }
     
@@ -113,10 +104,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const response = await fetch('/api/cart')
       if (response.ok) {
         const data = await response.json()
-        dispatch({ type: 'SET_CART', payload: { items: data.cartItems, total: data.total } })
+        if (data.success && data.cart) {
+          // استخدام البيانات مباشرة من API
+          const cartItems = data.cart
+          const total = data.cart.reduce((sum: number, item: any) => sum + (item.price * (item.quantity || 1)), 0)
+          
+          dispatch({ type: 'SET_CART', payload: { items: cartItems, total } })
+        } else {
+          // إذا لم تكن هناك سلة، أنشئ سلة فارغة
+          dispatch({ type: 'SET_CART', payload: { items: [], total: 0 } })
+        }
       }
     } catch (error) {
       console.error('Error fetching cart:', error)
+      // في حالة الخطأ، أنشئ سلة فارغة
+      dispatch({ type: 'SET_CART', payload: { items: [], total: 0 } })
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false })
     }
@@ -135,12 +137,33 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ productId, quantity })
       })
 
-      if (response.ok) {
+      const data = await response.json()
+
+      if (response.ok && data.success) {
         // إعادة جلب السلة لضمان التحديث الصحيح
         await refreshCart()
+        
+        // إشعار نجاح
+        if (typeof window !== 'undefined') {
+          const event = new CustomEvent('addToCartSuccess', { 
+            detail: { message: data.message } 
+          })
+          window.dispatchEvent(event)
+        }
+      } else {
+        throw new Error(data.error || 'فشل في إضافة المنتج للسلة')
       }
     } catch (error) {
       console.error('Error adding to cart:', error)
+      
+      // إشعار خطأ
+      if (typeof window !== 'undefined') {
+        const event = new CustomEvent('addToCartError', { 
+          detail: { message: error instanceof Error ? error.message : 'خطأ في إضافة المنتج للسلة' } 
+        })
+        window.dispatchEvent(event)
+      }
+      throw error
     }
   }
 
@@ -154,12 +177,40 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ quantity })
       })
 
-      if (response.ok) {
+      if (!response.ok) {
+        // محاولة قراءة error message من response
+        let errorMessage = 'فشل في تحديث الكمية'
+        try {
+          const errorData = await response.json()
+          errorMessage = errorData.error || errorMessage
+        } catch {
+          // إذا response مش JSON، استعمل status code
+          errorMessage = `خطأ ${response.status}: ${response.statusText}`
+        }
+        throw new Error(errorMessage)
+      }
+
+      const data = await response.json()
+
+      if (data.success) {
         // إعادة جلب السلة لضمان التحديث الصحيح
         await refreshCart()
+      } else {
+        throw new Error(data.error || 'فشل في تحديث الكمية')
       }
     } catch (error) {
       console.error('Error updating cart item:', error)
+      
+      // إشعار المستخدم بالخطأ
+      if (typeof window !== 'undefined') {
+        const errorMessage = error instanceof Error ? error.message : 'خطأ في تحديث الكمية'
+        const event = new CustomEvent('updateQuantityError', { 
+          detail: { message: errorMessage } 
+        })
+        window.dispatchEvent(event)
+      }
+      
+      throw error
     }
   }
 
@@ -167,16 +218,70 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     if (!session?.user) return
 
     try {
+      // التحقق من أن العنصر مؤقت (من localStorage)
+      const isTempItem = itemId.includes('coin-temp-') || itemId.includes('temp-')
+
+      if (isTempItem) {
+        // للعناصر المؤقتة، احذف من localStorage مباشرة
+        try {
+          const storedCart = localStorage.getItem("cart")
+          let currentCart = storedCart ? JSON.parse(storedCart) : []
+          
+          // إزالة العنصر من localStorage
+          currentCart = currentCart.filter((item: any) => item.id !== itemId)
+          localStorage.setItem("cart", JSON.stringify(currentCart))
+
+          // تحديث السلة على الخادم
+          await fetch("/api/cart", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ cart: currentCart }),
+          })
+
+          // إعادة جلب السلة
+          await refreshCart()
+          return
+        } catch (error) {
+          console.error('Error removing temp item from localStorage:', error)
+        }
+      }
+
+      // للعناصر العادية، استخدم API
       const response = await fetch(`/api/cart/${itemId}`, {
         method: 'DELETE'
       })
 
-      if (response.ok) {
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'فشل في حذف المنتج')
+      }
+
+      const data = await response.json()
+
+      if (data.success) {
         // إعادة جلب السلة لضمان التحديث الصحيح
         await refreshCart()
+      } else {
+        throw new Error(data.error || 'فشل في حذف المنتج')
       }
     } catch (error) {
       console.error('Error removing from cart:', error)
+      
+      // في حالة الخطأ، إعادة جلب السلة لضمان التطابق
+      await refreshCart()
+      
+      // إشعار المستخدم بالخطأ
+      if (typeof window !== 'undefined') {
+        const errorMessage = error instanceof Error ? error.message : 'خطأ في حذف المنتج'
+        const event = new CustomEvent('removeFromCartError', { 
+          detail: { message: errorMessage } 
+        })
+        window.dispatchEvent(event)
+      }
+      
+      throw error
     }
   }
 
@@ -184,11 +289,28 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'CLEAR_CART' })
   }
 
+  // Load cart when session changes
   useEffect(() => {
     if (session?.user) {
       refreshCart()
     } else {
-      dispatch({ type: 'CLEAR_CART' })
+      // Clear cart when not logged in
+      dispatch({ type: 'SET_CART', payload: { items: [], total: 0 } })
+    }
+  }, [session])
+
+  // Listen for cart update events
+  useEffect(() => {
+    const handleCartUpdate = () => {
+      refreshCart()
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('cartUpdated', handleCartUpdate)
+      
+      return () => {
+        window.removeEventListener('cartUpdated', handleCartUpdate)
+      }
     }
   }, [session])
 
@@ -211,7 +333,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 export function useCart() {
   const context = useContext(CartContext)
   if (context === undefined) {
-    throw new Error('useCart must be used within a CartProvider')
+    // بدلاً من throw error، أرجع قيم افتراضية آمنة
+    console.warn('useCart must be used within a CartProvider')
+    return {
+      items: [],
+      total: 0,
+      isLoading: false,
+      addToCart: async () => {},
+      updateQuantity: async () => {},
+      removeFromCart: async () => {},
+      clearCart: () => {},
+      refreshCart: async () => {}
+    }
   }
   return context
 } 

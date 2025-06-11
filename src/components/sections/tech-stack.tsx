@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { 
@@ -235,18 +236,22 @@ export function TechStack() {
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-6 py-3 font-semibold rounded-xl shadow-2xl hover:shadow-blue-500/25 transition-all duration-300 transform hover:scale-105">
-              <Brain className="ml-2 h-4 w-4" />
-              استشارة فنية مجانية
-              <ArrowLeft className="mr-2 h-4 w-4" />
-            </Button>
-            <Button 
-              variant="outline" 
-              size="lg" 
-              className="border-2 border-white/30 text-white hover:border-blue-400 hover:text-blue-400 hover:bg-white/10 px-6 py-3 rounded-xl"
-            >
-              تصفح أعمالنا التقنية
-            </Button>
+            <Link href="/contact">
+              <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-6 py-3 font-semibold rounded-xl shadow-2xl hover:shadow-blue-500/25 transition-all duration-300 transform hover:scale-105">
+                <Brain className="ml-2 h-4 w-4" />
+                استشارة فنية مجانية
+                <ArrowLeft className="mr-2 h-4 w-4" />
+              </Button>
+            </Link>
+            <Link href="/store">
+              <Button 
+                variant="outline" 
+                size="lg" 
+                className="border-2 border-white/30 text-white hover:border-blue-400 hover:text-blue-400 hover:bg-white/10 px-6 py-3 rounded-xl"
+              >
+                تصفح أعمالنا التقنية
+              </Button>
+            </Link>
           </div>
         </div>
       </div>

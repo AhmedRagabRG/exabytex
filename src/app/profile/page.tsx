@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -15,16 +15,15 @@ import {
   Shield, 
   Calendar,
   Settings,
-  FileText,
   BarChart3,
   ShoppingCart,
   Heart,
   BookOpen,
-  Users,
-  CheckCircle
+  CheckCircle,
+  CreditCard,
 } from 'lucide-react';
 import { BlogManagement } from '@/components/admin/BlogManagement';
-import Link from 'next/link';
+import { CurrencySettings } from '@/components/CurrencySettings';
 
 interface UserProfile {
   id: string;
@@ -48,7 +47,7 @@ export default function ProfilePage() {
   const router = useRouter();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-
+  
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
@@ -62,7 +61,34 @@ export default function ProfilePage() {
       const response = await fetch('/api/user/profile');
       if (response.ok) {
         const data = await response.json();
-        setUserProfile(data);
+        console.log('📊 البيانات الكاملة من API:', data);
+        
+        if (data.success && data.user) {
+          const userData = data.user;
+          console.log('📊 بيانات المستخدم:', userData);
+          console.log('🛡️ دور المستخدم:', userData.role);
+          console.log('🔍 هل هو مدير؟', userData.role === 'ADMIN' || userData.role === 'MANAGER');
+          
+          // تحويل البيانات للـ format المطلوب
+          const profileData = {
+            id: userData.id,
+            name: userData.name,
+            email: userData.email,
+            phone: userData.phone,
+            image: userData.image,
+            role: userData.role,
+            createdAt: userData.createdAt,
+            _count: {
+              orders: userData.totalOrders || 0,
+              cartItems: 0, // سيتم إضافتها لاحقاً
+              wishlistItems: userData.savedProducts || 0,
+              authoredBlogs: 0, // سيتم إضافتها لاحقاً
+              approvedBlogs: 0, // سيتم إضافتها لاحقاً
+            }
+          };
+          
+          setUserProfile(profileData);
+        }
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -172,155 +198,158 @@ export default function ProfilePage() {
             <CardContent className="p-4 text-center">
               <ShoppingCart className="h-8 w-8 text-blue-400 mx-auto mb-2" />
               <div className="text-2xl font-bold text-white">{userProfile._count.orders}</div>
-              <div className="text-sm text-gray-300">طلبات</div>
+              <div className="text-gray-400 text-sm">الطلبات</div>
             </CardContent>
           </Card>
-          
           <Card className="bg-white/5 border-white/10">
             <CardContent className="p-4 text-center">
               <Heart className="h-8 w-8 text-red-400 mx-auto mb-2" />
               <div className="text-2xl font-bold text-white">{userProfile._count.wishlistItems}</div>
-              <div className="text-sm text-gray-300">المفضلة</div>
+              <div className="text-gray-400 text-sm">المفضلة</div>
             </CardContent>
           </Card>
-
           <Card className="bg-white/5 border-white/10">
             <CardContent className="p-4 text-center">
               <BookOpen className="h-8 w-8 text-green-400 mx-auto mb-2" />
               <div className="text-2xl font-bold text-white">{userProfile._count.authoredBlogs}</div>
-              <div className="text-sm text-gray-300">مقالات</div>
+              <div className="text-gray-400 text-sm">المقالات</div>
             </CardContent>
           </Card>
-
-          {(userProfile.role === 'MANAGER' || userProfile.role === 'ADMIN') && (
-            <Card className="bg-white/5 border-white/10">
-              <CardContent className="p-4 text-center">
-                <CheckCircle className="h-8 w-8 text-purple-400 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-white">{userProfile._count.approvedBlogs}</div>
-                <div className="text-sm text-gray-300">موافقات</div>
-              </CardContent>
-            </Card>
-          )}
+          <Card className="bg-white/5 border-white/10">
+            <CardContent className="p-4 text-center">
+              <CheckCircle className="h-8 w-8 text-purple-400 mx-auto mb-2" />
+              <div className="text-2xl font-bold text-white">{userProfile._count.approvedBlogs}</div>
+              <div className="text-gray-400 text-sm">المعتمدة</div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Tabs */}
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 bg-white/10 border-white/20">
-            <TabsTrigger value="overview" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
-              <BarChart3 className="h-4 w-4 ml-2" />
-              نظرة عامة
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
-              <Settings className="h-4 w-4 ml-2" />
-              الإعدادات
-            </TabsTrigger>
-            <TabsTrigger value="my-blogs" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
-              <FileText className="h-4 w-4 ml-2" />
-              مقالاتي
-            </TabsTrigger>
-            {(userProfile.role === 'MANAGER' || userProfile.role === 'ADMIN') && (
-              <TabsTrigger value="blog-management" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
-                <Users className="h-4 w-4 ml-2" />
-                إدارة المقالات
-              </TabsTrigger>
-            )}
-          </TabsList>
+        {/* محتوى الملف الشخصي */}
+        <Card className="bg-white/10 backdrop-blur-md border-white/20">
+          <Tabs defaultValue="profile" className="w-full">
+            <TabsList className="grid w-full grid-cols-4 bg-white/5 border-white/10">
+              <TabsTrigger value="profile" className="data-[state=active]:bg-white/20">الملف الشخصي</TabsTrigger>
+              <TabsTrigger value="orders" className="data-[state=active]:bg-white/20">الطلبات</TabsTrigger>
+              <TabsTrigger value="settings" className="data-[state=active]:bg-white/20">الإعدادات</TabsTrigger>
+              {(userProfile?.role === 'ADMIN' || userProfile?.role === 'MANAGER') && (
+                <TabsTrigger value="admin" className="data-[state=active]:bg-white/20">
+                  <Shield className="h-4 w-4 mr-2" />
+                  إدارة
+                </TabsTrigger>
+              )}
+            </TabsList>
 
-          <TabsContent value="overview" className="space-y-6">
-            <Card className="bg-white/10 backdrop-blur-md border-white/20">
-              <CardHeader>
-                <CardTitle className="text-white">نظرة عامة على الحساب</CardTitle>
-                <CardDescription className="text-gray-300">
-                  ملخص نشاطك على المنصة
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <h3 className="font-semibold text-white mb-3">الأنشطة الأخيرة</h3>
-                    <div className="space-y-2 text-gray-300">
-                      <p>• آخر تسجيل دخول: اليوم</p>
-                      <p>• عدد المقالات المكتوبة: {userProfile._count.authoredBlogs}</p>
-                      <p>• عدد الطلبات: {userProfile._count.orders}</p>
-                      {(userProfile.role === 'MANAGER' || userProfile.role === 'ADMIN') && (
-                        <p>• عدد المقالات المراجعة: {userProfile._count.approvedBlogs}</p>
-                      )}
+            <TabsContent value="profile" className="space-y-6 mt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card className="bg-white/5 border-white/10">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-white">
+                      <User className="h-5 w-5" />
+                      المعلومات الشخصية
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label className="text-gray-300">الاسم</Label>
+                      <div className="text-white">{userProfile.name}</div>
                     </div>
-                  </div>
-                  
-                  <div>
-                    <h3 className="font-semibold text-white mb-3">إجراءات سريعة</h3>
-                    <div className="space-y-2">
-                      <Link href="/blog/write">
-                        <Button variant="outline" className="w-full border-white/20 text-white hover:bg-white/10">
-                          <FileText className="h-4 w-4 ml-2" />
-                          كتابة مقال جديد
-                        </Button>
-                      </Link>
-                      <Link href="/store">
-                        <Button variant="outline" className="w-full border-white/20 text-white hover:bg-white/10">
-                          <ShoppingCart className="h-4 w-4 ml-2" />
-                          تصفح المتجر
-                        </Button>
-                      </Link>
-                      <Link href="/blog">
-                        <Button variant="outline" className="w-full border-white/20 text-white hover:bg-white/10">
-                          <BookOpen className="h-4 w-4 ml-2" />
-                          قراءة المقالات
-                        </Button>
-                      </Link>
+                    <div>
+                      <Label className="text-gray-300">البريد الإلكتروني</Label>
+                      <div className="text-white">{userProfile.email}</div>
                     </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                    {userProfile.phone && (
+                      <div>
+                        <Label className="text-gray-300">رقم الهاتف</Label>
+                        <div className="text-white">{userProfile.phone}</div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
 
-          <TabsContent value="settings">
-            <Card className="bg-white/10 backdrop-blur-md border-white/20">
-              <CardHeader>
-                <CardTitle className="text-white">إعدادات الحساب</CardTitle>
-                <CardDescription className="text-gray-300">
-                  إدارة معلوماتك الشخصية وإعدادات الحساب
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center text-gray-300 py-8">
-                  <Settings className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-                  <p>صفحة الإعدادات قيد التطوير</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="my-blogs">
-            <Card className="bg-white/10 backdrop-blur-md border-white/20">
-              <CardHeader>
-                <CardTitle className="text-white">مقالاتي</CardTitle>
-                <CardDescription className="text-gray-300">
-                  جميع المقالات التي كتبتها
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center text-gray-300 py-8">
-                  <FileText className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-                  <p>عرض مقالاتك الشخصية قيد التطوير</p>
-                  <Link href="/blog/write">
-                    <Button className="mt-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white">
-                      اكتب مقال جديد
-                    </Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {(userProfile.role === 'MANAGER' || userProfile.role === 'ADMIN') && (
-            <TabsContent value="blog-management">
-              <BlogManagement />
+                <Card className="bg-white/5 border-white/10">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-white">
+                      <BarChart3 className="h-5 w-5" />
+                      إحصائيات النشاط
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex justify-between">
+                      <span className="text-gray-300">إجمالي الطلبات</span>
+                      <span className="text-white font-bold">{userProfile._count.orders}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-300">العناصر المفضلة</span>
+                      <span className="text-white font-bold">{userProfile._count.wishlistItems}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-300">المقالات المكتوبة</span>
+                      <span className="text-white font-bold">{userProfile._count.authoredBlogs}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
-          )}
-        </Tabs>
+
+            <TabsContent value="orders" className="space-y-4 mt-6">
+              <Card className="bg-white/5 border-white/10">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-white">
+                    <ShoppingCart className="h-5 w-5" />
+                    طلباتي
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center text-gray-400 py-8">
+                    لا توجد طلبات بعد
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="settings" className="space-y-4 mt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card className="bg-white/5 border-white/10">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-white">
+                      <Settings className="h-5 w-5" />
+                      إعدادات الحساب
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <Button variant="outline" className="w-full border-white/20 hover:bg-white/10">
+                      تعديل المعلومات الشخصية
+                    </Button>
+                    <Button variant="outline" className="w-full border-white/20 hover:bg-white/10">
+                      تغيير كلمة المرور
+                    </Button>
+                    <Button variant="destructive" className="w-full">
+                      حذف الحساب
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-white/5 border-white/10">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-white">
+                      <CreditCard className="h-5 w-5" />
+                      إعدادات العملة
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <CurrencySettings />
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            {(userProfile.role === 'ADMIN' || userProfile.role === 'MANAGER') && (
+              <TabsContent value="admin" className="space-y-4 mt-6">
+                <BlogManagement />
+              </TabsContent>
+            )}
+          </Tabs>
+        </Card>
       </div>
     </div>
   );

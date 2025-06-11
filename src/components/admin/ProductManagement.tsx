@@ -12,6 +12,11 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { PriceDisplay, DiscountPrice } from '@/components/ui/PriceDisplay'
 
 interface Product {
   id: string;
@@ -32,6 +37,14 @@ interface Product {
   };
 }
 
+interface Category {
+  id: string;
+  name: string;
+  description?: string;
+  icon: string;
+  isActive: boolean;
+}
+
 interface ProductFormData {
   title: string;
   description: string;
@@ -46,7 +59,7 @@ interface ProductFormData {
 
 const ProductManagement = () => {
   const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -94,20 +107,25 @@ const ProductManagement = () => {
   // جلب الفئات
   const fetchCategories = async () => {
     try {
-      const response = await fetch('/api/categories');
+      // إضافة timestamp لمنع cache
+      const response = await fetch(`/api/categories?_t=${Date.now()}`);
       if (response.ok) {
         const contentType = response.headers.get("content-type")
         if (contentType && contentType.indexOf("application/json") !== -1) {
           const data = await response.json();
+          console.log('📋 تم جلب الفئات:', data);
           setCategories(data);
         } else {
           console.error('Categories API response is not JSON:', await response.text())
+          toast.error('خطأ في تحميل الفئات');
         }
       } else {
         console.error('Error fetching categories:', response.status, response.statusText);
+        toast.error('فشل في تحميل الفئات');
       }
     } catch (error) {
       console.error('Error fetching categories:', error);
+      toast.error('خطأ في الاتصال مع الخادم');
     }
   };
 
@@ -165,6 +183,7 @@ const ProductManagement = () => {
       if (response.ok) {
         await response.json();
         await fetchProducts();
+        await fetchCategories(); // تحديث الفئات أيضاً
         resetForm();
         toast.success(editingProduct ? 'تم تحديث المنتج بنجاح!' : 'تم إضافة المنتج بنجاح!');
       } else {
@@ -381,18 +400,13 @@ const ProductManagement = () => {
                 </span>
                 <div className="text-right">
                   {product.hasDiscount ? (
-                    <div>
-                      <span className="text-lg font-bold text-green-600">
-                        {product.discountedPrice?.toLocaleString('ar-SA')} ج.م
-                      </span>
-                      <span className="text-sm text-gray-500 line-through mr-2">
-                        {product.price.toLocaleString('ar-SA')} ج.م
-                      </span>
-                    </div>
+                    <DiscountPrice 
+                      amount={product.discountedPrice || 0}
+                      originalAmount={product.price}
+                      showSavings={false}
+                    />
                   ) : (
-                    <span className="text-lg font-bold text-gray-900">
-                      {product.price.toLocaleString('ar-SA')} ج.م
-                    </span>
+                    <PriceDisplay amount={product.price} size="sm" />
                   )}
                 </div>
               </div>
@@ -459,9 +473,19 @@ const ProductManagement = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    الفئة *
-                  </label>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      الفئة *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={fetchCategories}
+                      className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                      title="تحديث الفئات"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                    </button>
+                  </div>
                   <select
                     required
                     value={formData.category}
@@ -469,13 +493,17 @@ const ProductManagement = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="">اختر الفئة</option>
-                    <option value="الذكاء الاصطناعي">الذكاء الاصطناعي</option>
-                    <option value="خدمة العملاء">خدمة العملاء</option>
-                    <option value="التسويق الرقمي">التسويق الرقمي</option>
-                    <option value="تحليل البيانات">تحليل البيانات</option>
-                    <option value="التجارة الإلكترونية">التجارة الإلكترونية</option>
-                    <option value="الموارد البشرية">الموارد البشرية</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.name}>
+                        {category.name}
+                      </option>
+                    ))}
                   </select>
+                  {categories.length === 0 && (
+                    <p className="text-xs text-red-600 mt-1">
+                      لا توجد فئات متاحة. يرجى إضافة فئات أولاً.
+                    </p>
+                  )}
                 </div>
               </div>
 

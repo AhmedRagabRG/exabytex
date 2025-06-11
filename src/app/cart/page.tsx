@@ -23,8 +23,12 @@ import {
   CheckCircle,
   Star,
   Tag,
-  Gift
+  Gift,
+  Coins
 } from 'lucide-react'
+import { useCartStore } from '@/store/cartStore'
+import { Badge } from '@/components/ui/badge'
+import { PriceDisplay, DiscountPrice } from '@/components/ui/PriceDisplay'
 
 interface PromoCode {
   id: string
@@ -70,6 +74,33 @@ export default function CartPage() {
     }
   }, [status, router])
 
+  // إضافة event listeners للـ cart errors
+  useEffect(() => {
+    const handleRemoveError = (event: any) => {
+      const errorDiv = document.createElement('div')
+      errorDiv.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50'
+      errorDiv.textContent = event.detail.message || 'خطأ في حذف المنتج'
+      document.body.appendChild(errorDiv)
+      setTimeout(() => errorDiv.remove(), 4000)
+    }
+
+    const handleUpdateError = (event: any) => {
+      const errorDiv = document.createElement('div')
+      errorDiv.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50'
+      errorDiv.textContent = event.detail.message || 'خطأ في تحديث الكمية'
+      document.body.appendChild(errorDiv)
+      setTimeout(() => errorDiv.remove(), 4000)
+    }
+
+    window.addEventListener('removeFromCartError', handleRemoveError)
+    window.addEventListener('updateQuantityError', handleUpdateError)
+
+    return () => {
+      window.removeEventListener('removeFromCartError', handleRemoveError)
+      window.removeEventListener('updateQuantityError', handleUpdateError)
+    }
+  }, [])
+
   const applyPromoCode = async () => {
     if (!promoCode.trim()) return
 
@@ -114,22 +145,37 @@ export default function CartPage() {
   }
 
   // حساب السعر الصحيح للمنتج (مع أو بدون خصم)
-  const getProductPrice = (product: any) => {
-    return (product.hasDiscount && product.discountedPrice) 
-      ? product.discountedPrice 
-      : product.price
+  const getProductPrice = (item: any) => {
+    return (item.hasDiscount && item.discountedPrice) 
+      ? item.discountedPrice 
+      : item.price
   }
 
   // حساب السعر الأصلي للمنتج
-  const getOriginalPrice = (product: any) => {
-    return product.price
+  const getOriginalPrice = (item: any) => {
+    return item.price
   }
 
   // حساب المجموع الصحيح للسلة
   const calculateCartTotal = () => {
     return items.reduce((sum, item) => {
-      return sum + (getProductPrice(item.product) * item.quantity)
+      return sum + (getProductPrice(item) * item.quantity)
     }, 0)
+  }
+
+  // التحقق من نوع المنتج (كوينز أم منتج عادي)
+  const isCoinProduct = (item: any) => {
+    return item.category === 'كوينز' || item.name?.includes('كوين')
+  }
+
+  // استخراج عدد الكوينز من المنتج
+  const getCoinAmount = (item: any) => {
+    try {
+      const features = item.features ? JSON.parse(item.features) : null
+      return features?.coinAmount || parseInt(item.name?.match(/\d+/)?.[0] || '0')
+    } catch {
+      return parseInt(item.name?.match(/\d+/)?.[0] || '0')
+    }
   }
 
   const cartSubtotal = calculateCartTotal()
@@ -211,38 +257,11 @@ export default function CartPage() {
 
   const handleQuantityChange = async (itemId: string, newQuantity: number) => {
     if (newQuantity < 1) return
-    await updateQuantity(itemId, newQuantity)
-    // إعادة حساب الكوبون عند تغيير الكمية
-    if (appliedPromo) {
-      const newTotal = calculateCartTotal()
-      try {
-        const response = await fetch('/api/promo-codes/validate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            code: appliedPromo.promoCode.code,
-            cartTotal: newTotal
-          })
-        })
-        
-        if (response.ok) {
-          const data = await response.json()
-          setAppliedPromo(data)
-        } else {
-          setAppliedPromo(null)
-        }
-      } catch (error) {
-        console.log(error)
-        setAppliedPromo(null)
-      }
-    }
-  }
-
-  const handleRemoveItem = async (itemId: string) => {
-    await removeFromCart(itemId)
-    // إعادة حساب الكوبون عند حذف عنصر
-    if (appliedPromo && items.length > 1) {
-      setTimeout(async () => {
+    
+    try {
+      await updateQuantity(itemId, newQuantity)
+      // إعادة حساب الكوبون عند تغيير الكمية
+      if (appliedPromo) {
         const newTotal = calculateCartTotal()
         try {
           const response = await fetch('/api/promo-codes/validate', {
@@ -264,9 +283,57 @@ export default function CartPage() {
           console.log(error)
           setAppliedPromo(null)
         }
-      }, 100)
-    } else if (items.length === 1) {
-      setAppliedPromo(null)
+      }
+    } catch (error) {
+      console.error('Error in handleQuantityChange:', error)
+      // إظهار رسالة خطأ للمستخدم
+      const errorDiv = document.createElement('div')
+      errorDiv.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50'
+      errorDiv.textContent = error instanceof Error ? error.message : 'خطأ في تحديث الكمية'
+      document.body.appendChild(errorDiv)
+      setTimeout(() => errorDiv.remove(), 4000)
+    }
+  }
+
+  const handleRemoveItem = async (itemId: string) => {
+    try {
+      await removeFromCart(itemId)
+      // إعادة حساب الكوبون عند حذف عنصر
+      if (appliedPromo && items.length > 1) {
+        setTimeout(async () => {
+          const newTotal = calculateCartTotal()
+          try {
+            const response = await fetch('/api/promo-codes/validate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 
+                code: appliedPromo.promoCode.code,
+                cartTotal: newTotal
+              })
+            })
+            
+            if (response.ok) {
+              const data = await response.json()
+              setAppliedPromo(data)
+            } else {
+              setAppliedPromo(null)
+            }
+          } catch (error) {
+            console.log(error)
+            setAppliedPromo(null)
+          }
+        }, 100)
+      } else if (items.length === 1) {
+        setAppliedPromo(null)
+      }
+    } catch (error) {
+      console.error('Error in handleRemoveItem:', error)
+      // إظهار رسالة خطأ للمستخدم
+      const errorDiv = document.createElement('div')
+      errorDiv.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50'
+      errorDiv.textContent = error instanceof Error ? error.message : 'خطأ في حذف المنتج من السلة'
+      document.body.appendChild(errorDiv)
+      setTimeout(() => errorDiv.remove(), 4000)
     }
   }
 
@@ -324,30 +391,54 @@ export default function CartPage() {
           {/* Cart Items */}
           <div className="lg:col-span-2 space-y-6">
             {items.map((item, index) => {
-              const productPrice = getProductPrice(item.product)
-              const originalPrice = getOriginalPrice(item.product)
-              const hasDiscount = (item.product as any).hasDiscount && (item.product as any).discountedPrice
+              const productPrice = getProductPrice(item)
+              const originalPrice = getOriginalPrice(item)
+              const hasDiscount = (item as any).hasDiscount && (item as any).discountedPrice
+              const isCoins = isCoinProduct(item)
+              const coinAmount = isCoins ? getCoinAmount(item) : 0
               
               return (
-                <Card key={item.id} className="relative overflow-hidden border-0 bg-white/10 backdrop-blur-md shadow-2xl hover:scale-[1.02] transition-transform duration-300">
+                <Card key={item.id} className={`relative overflow-hidden border-0 backdrop-blur-md shadow-2xl hover:scale-[1.02] transition-transform duration-300 ${
+                  isCoins 
+                    ? 'bg-gradient-to-br from-yellow-500/20 via-orange-500/10 to-red-500/10 border border-yellow-500/30' 
+                    : 'bg-white/10'
+                }`}>
                   <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
+                  {isCoins && (
+                    <div className="absolute top-0 right-0 bg-gradient-to-r from-yellow-400 to-orange-400 text-white px-3 py-1 rounded-bl-lg text-xs font-bold">
+                      ⭐ كوينز ذهبية
+                    </div>
+                  )}
                   <CardContent className="p-6 relative z-10">
                     <div className="flex items-center space-x-6 rtl:space-x-reverse">
                       {/* Product Image */}
                       <div className="flex-shrink-0">
-                        <div className="w-24 h-24 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl flex items-center justify-center shadow-xl relative overflow-hidden">
-                          {item.product.image ? (
+                        <div className={`w-24 h-24 rounded-xl flex items-center justify-center shadow-xl relative overflow-hidden ${
+                          isCoins
+                            ? 'bg-gradient-to-r from-yellow-500 via-orange-500 to-red-500'
+                            : 'bg-gradient-to-r from-blue-500 to-purple-500'
+                        }`}>
+                          {item.image ? (
                             <Image
-                              src={item.product.image}
-                              alt={item.product.title}
+                              src={item.image}
+                              alt={item.name}
                               width={96}
                               height={96}
                               className="rounded-xl object-cover w-full h-full"
                             />
+                          ) : isCoins ? (
+                            <div className="flex flex-col items-center">
+                              <Coins className="w-8 h-8 text-white mb-1" />
+                              <span className="text-xs font-bold text-white">{coinAmount}</span>
+                            </div>
                           ) : (
                             <Brain className="w-12 h-12 text-white" />
                           )}
-                          <div className="absolute -top-2 -right-2 w-6 h-6 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full flex items-center justify-center">
+                          <div className={`absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center ${
+                            isCoins
+                              ? 'bg-gradient-to-r from-yellow-400 to-orange-400'
+                              : 'bg-gradient-to-r from-yellow-400 to-orange-400'
+                          }`}>
                             <span className="text-xs font-bold text-white">{index + 1}</span>
                           </div>
                         </div>
@@ -355,12 +446,34 @@ export default function CartPage() {
 
                       {/* Product Info */}
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-xl font-bold text-white mb-2">
-                          {item.product.title}
-                        </h3>
-                        <p className="text-gray-300 mb-3 text-sm line-clamp-2">
-                          {item.product.description}
-                        </p>
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="text-xl font-bold text-white">
+                            {item.name}
+                          </h3>
+                          {isCoins && (
+                            <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
+                              💰 كوينز
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        {isCoins ? (
+                          <div className="space-y-2 mb-3">
+                            <p className="text-yellow-200 text-sm">
+                              🎯 باقة كوينز لاستخدام مولد المحتوى بالذكاء الاصطناعي
+                            </p>
+                            <div className="flex items-center gap-4 text-sm">
+                              <span className="text-yellow-300">💎 {coinAmount} كوين</span>
+                              <span className="text-yellow-300">⚡ {Math.floor(coinAmount / 20)} مقال</span>
+                              <span className="text-yellow-300">🚀 فوري</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-gray-300 mb-3 text-sm line-clamp-2">
+                            {item.description}
+                          </p>
+                        )}
+                        
                         <div className="flex items-center gap-3 mb-4">
                           <div className="flex items-center gap-1">
                             {[...Array(5)].map((_, i) => (
@@ -368,37 +481,49 @@ export default function CartPage() {
                             ))}
                           </div>
                           <span className="text-sm text-gray-400">(4.9)</span>
-                          <span className="px-2 py-1 bg-blue-500/20 text-blue-300 text-xs rounded-full border border-blue-500/30">
-                            {item.product.category}
+                          <span className={`px-2 py-1 text-xs rounded-full border ${
+                            isCoins
+                              ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30'
+                              : 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+                          }`}>
+                            {item.category}
                           </span>
                         </div>
 
-                        {/* Quantity Controls */}
-                        <div className="flex items-center space-x-3 rtl:space-x-reverse">
-                          <span className="text-sm text-gray-300 font-medium">الكمية:</span>
-                          <div className="flex items-center bg-white/10 rounded-lg backdrop-blur-sm">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
-                              disabled={item.quantity <= 1}
-                              className="text-gray-300 hover:text-white hover:bg-white/20 rounded-r-none"
-                            >
-                              <Minus className="w-4 h-4" />
-                            </Button>
-                            <span className="px-4 py-2 text-white font-bold min-w-[50px] text-center">
-                              {item.quantity}
-                            </span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                              className="text-gray-300 hover:text-white hover:bg-white/20 rounded-l-none"
-                            >
-                              <Plus className="w-4 h-4" />
-                            </Button>
+                        {/* Quantity Controls - مخفية للكوينز */}
+                        {!isCoins && (
+                          <div className="flex items-center space-x-3 rtl:space-x-reverse">
+                            <span className="text-sm text-gray-300 font-medium">الكمية:</span>
+                            <div className="flex items-center bg-white/10 rounded-lg backdrop-blur-sm">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                                disabled={item.quantity <= 1}
+                                className="text-gray-300 hover:text-white hover:bg-white/20 rounded-r-none"
+                              >
+                                <Minus className="w-4 h-4" />
+                              </Button>
+                              <span className="px-4 py-2 text-white font-bold min-w-[50px] text-center">
+                                {item.quantity}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                                className="text-gray-300 hover:text-white hover:bg-white/20 rounded-l-none"
+                              >
+                                <Plus className="w-4 h-4" />
+                              </Button>
+                            </div>
                           </div>
-                        </div>
+                        )}
+
+                        {isCoins && (
+                          <div className="text-sm text-yellow-200 bg-yellow-500/10 rounded-lg p-2 border border-yellow-500/20">
+                            💡 سيتم إضافة الكوينز لحسابك فور إتمام الدفع
+                          </div>
+                        )}
                       </div>
 
                       {/* Price & Remove */}
@@ -415,27 +540,27 @@ export default function CartPage() {
                         
                         <div className="mb-4">
                           {hasDiscount ? (
-                            <div className="space-y-1">
-                              <p className="text-sm text-gray-400 line-through flex items-center justify-center gap-1">
-                                <span className="text-xs">الأصلي:</span>
-                                {(originalPrice * item.quantity).toLocaleString('ar-SA')} ر.س
-                              </p>
-                              <p className="text-2xl font-bold text-green-400">
-                                {(productPrice * item.quantity).toLocaleString('ar-SA')} ر.س
-                              </p>
-                              <div className="flex items-center justify-center gap-2">
-                                <span className="inline-block px-2 py-1 bg-green-500/20 text-green-400 text-xs font-bold rounded-full">
-                                  وفر {(((originalPrice - productPrice) / originalPrice) * 100).toFixed(0)}%
-                                </span>
-                                <span className="text-xs text-gray-400">
-                                  مدخرات: {((originalPrice - productPrice) * item.quantity).toLocaleString('ar-SA')} ر.س
-                                </span>
-                              </div>
-                            </div>
+                            <DiscountPrice 
+                              amount={productPrice * item.quantity}
+                              originalAmount={originalPrice * item.quantity}
+                              showSavings={true}
+                            />
                           ) : (
-                            <p className="text-2xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-                              {(productPrice * item.quantity).toLocaleString('ar-SA')} ر.س
-                            </p>
+                            <div className="space-y-1">
+                              <PriceDisplay 
+                                amount={productPrice * item.quantity} 
+                                size="md"
+                                className={isCoins 
+                                  ? "bg-gradient-to-r from-yellow-400 via-orange-400 to-red-400 bg-clip-text text-transparent"
+                                  : "bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent"
+                                }
+                              />
+                              {isCoins && (
+                                <div className="text-xs text-yellow-300">
+                                  {(productPrice / coinAmount * 1).toFixed(3)} ريال/كوين
+                                </div>
+                              )}
+                            </div>
                           )}
                         </div>
                         <Button
@@ -540,35 +665,37 @@ export default function CartPage() {
                 </div>
 
                 <div className="space-y-4 mb-8">
-                  <div className="flex justify-between items-center text-sm p-3 rounded-lg bg-white/5">
+                  <div className="flex justify-between items-center text-sm p-3 rounded-lg bg-white/5 dir-rtl">
                     <span className="text-gray-300">المجموع الفرعي:</span>
-                    <span className="font-bold text-white">{cartSubtotal.toLocaleString('ar-SA')} ر.س</span>
+                    <PriceDisplay amount={cartSubtotal} size="sm" />
                   </div>
                   
                   {appliedPromo && (
-                    <div className="flex justify-between items-center text-sm p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                    <div className="flex justify-between items-center text-sm p-3 rounded-lg bg-green-500/10 border border-green-500/20 dir-rtl">
                       <span className="text-gray-300">خصم الكوبون:</span>
-                      <span className="font-bold text-green-400">-{appliedPromo.discountAmount.toLocaleString('ar-SA')} ر.س</span>
+                      <span className="font-bold text-green-400">-<PriceDisplay amount={appliedPromo.discountAmount} size="sm" /></span>
                     </div>
                   )}
                   
-                  <div className="flex justify-between items-center text-sm p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                  <div className="flex justify-between items-center text-sm p-3 rounded-lg bg-green-500/10 border border-green-500/20 dir-rtl">
                     <span className="text-gray-300">الشحن:</span>
                     <span className="font-bold text-green-400">مجاني</span>
                   </div>
                   
                   <div className="border-t border-white/20 pt-4">
-                    <div className="flex justify-between items-center p-4 rounded-lg bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30">
+                    <div className="flex justify-between items-center p-4 rounded-lg bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30 dir-rtl">
                       <span className="text-lg font-bold text-white">المجموع الكلي:</span>
-                      <span className="text-xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-                        {finalTotal.toLocaleString('ar-SA')} ر.س
-                      </span>
+                      <PriceDisplay 
+                        amount={finalTotal} 
+                        size="lg"
+                        className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent"
+                      />
                     </div>
                   </div>
 
                   {appliedPromo && (
                     <div className="text-center text-sm text-green-400 font-medium">
-                      🎉 وفرت {appliedPromo.discountAmount.toLocaleString('ar-SA')} ر.س من هذا الطلب!
+                      🎉 وفرت <PriceDisplay amount={appliedPromo.discountAmount} size="sm" /> من هذا الطلب!
                     </div>
                   )}
                 </div>

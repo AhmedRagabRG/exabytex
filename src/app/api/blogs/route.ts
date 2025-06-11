@@ -6,13 +6,59 @@ import { Session } from 'next-auth';
 
 const prisma = new PrismaClient();
 
-// GET - جلب جميع المقالات المنشورة
+// GET - جلب جميع المقالات المنشورة أو مقال واحد بواسطة slug
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+    const slug = searchParams.get('slug');
+    
+    // إذا كان هناك slug، جلب مقال واحد
+    if (slug) {
+      const post = await prisma.blogPost.findFirst({
+        where: { 
+          slug: slug,
+          published: true,
+          status: 'PUBLISHED'
+        },
+        include: {
+          author: {
+            select: {
+              name: true,
+              image: true
+            }
+          }
+        }
+      });
+
+      if (!post) {
+        return NextResponse.json(
+          { success: false, message: 'المقال غير موجود' },
+          { status: 404 }
+        );
+      }
+      
+      // ملاحظة: لا نفحص isVisible هنا للسماح بالوصول المباشر للمقالات المخفية
+
+      // تحويل المقال للصيغة المطلوبة
+      const formattedPost = {
+        ...post,
+        tags: JSON.parse(post.tags || '[]'),
+        publishedAt: post.publishedAt?.toISOString() || null,
+        createdAt: post.createdAt.toISOString(),
+        updatedAt: post.updatedAt.toISOString(),
+      };
+
+      return NextResponse.json({
+        success: true,
+        post: formattedPost
+      });
+    }
+    
+    // جلب جميع المقالات
     const status = searchParams.get('status') || 'PUBLISHED';
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
+    const isAdmin = searchParams.get('admin') === 'true'; // للإدارة
     const skip = (page - 1) * limit;
 
     // شروط البحث
@@ -21,6 +67,10 @@ export async function GET(request: NextRequest) {
     if (status === 'PUBLISHED') {
       where.status = 'PUBLISHED';
       where.published = true;
+      // إذا لم يكن مدير، فقط المقالات المرئية
+      if (!isAdmin) {
+        (where as any).isVisible = true;
+      }
     } else if (status === 'ALL') {
       // لا توجد شروط إضافية - عرض الكل
     } else {

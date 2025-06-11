@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { getAmountForKashier } from '@/lib/currency';
 
 const KASHIER_CONFIG = {
   merchantId: process.env.KASHIER_MERCHANT_ID || '',
@@ -92,7 +93,20 @@ export async function POST(request: NextRequest) {
     }
 
     const orderId = generateOrderId();
-    const amount = parseFloat(orderData.totals.total.toFixed(2));
+    const originalAmount = parseFloat(orderData.totals.total.toFixed(2));
+    
+    // تحويل المبلغ للجنيه المصري للكاشير
+    const currencyConversion = await getAmountForKashier(originalAmount);
+    const amount = currencyConversion.kashierAmount;
+    
+    console.log('=== Currency Conversion ===');
+    console.log('Original:', currencyConversion.originalAmount, currencyConversion.originalCurrency);
+    console.log('For Kashier:', currencyConversion.kashierAmount, currencyConversion.kashierCurrency);
+    if (currencyConversion.exchangeRate) {
+      console.log('Exchange Rate:', currencyConversion.exchangeRate);
+    }
+    console.log('===========================');
+    
     const baseUrl = getBaseUrl();
     
     // إعداد البيانات المنظفة والمنسقة
@@ -189,6 +203,7 @@ export async function POST(request: NextRequest) {
       success: true,
       orderId: orderId,
       paymentUrl: kashierPaymentUrl,
+      currencyConversion: currencyConversion,
       debug: {
         merchantId: paymentData.merchantId,
         orderId: paymentData.orderId,
@@ -200,7 +215,10 @@ export async function POST(request: NextRequest) {
         failureUrl: paymentData.failure,
         customerData: cleanCustomer,
         hashGenerated: !!paymentData.hash,
-        urlLength: kashierPaymentUrl.length
+        urlLength: kashierPaymentUrl.length,
+        originalAmount: currencyConversion.originalAmount,
+        convertedAmount: currencyConversion.kashierAmount,
+        exchangeRate: currencyConversion.exchangeRate
       }
     });
 

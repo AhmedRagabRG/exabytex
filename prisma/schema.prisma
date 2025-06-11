@@ -63,6 +63,14 @@ model User {
   createdPromoCodes PromoCode[] @relation("PromoCodeCreator")
   authoredBlogs   BlogPost[] @relation("BlogAuthor")
   approvedBlogs   BlogPost[] @relation("BlogApprover")
+  comments        Comment[] @relation("CommentAuthor")
+  siteSettings    SiteSettings[] @relation("SiteSettingsUpdater")
+  
+  // AI Content & Coins System
+  coins           UserCoins?
+  coinTransactions CoinTransaction[]
+  aiContents      AIContent[]
+  coinPurchases   CoinPurchase[]
 }
 
 model VerificationToken {
@@ -180,6 +188,7 @@ model BlogPost {
   featured    Boolean     @default(false)
   status      BlogStatus  @default(PENDING)  // حالة المقال
   published   Boolean     @default(false)
+  isVisible   Boolean     @default(true)      // للتحكم في الإظهار/الإخفاء في الموقع
   publishedAt DateTime?   // تاريخ النشر
   rejectionReason String? // سبب الرفض
   approvedById String?    // من وافق على المقال
@@ -189,6 +198,28 @@ model BlogPost {
   author      User        @relation("BlogAuthor", fields: [authorId], references: [id], onDelete: Cascade)
   approvedBy  User?       @relation("BlogApprover", fields: [approvedById], references: [id])
   featuredPost FeaturedBlogPost?
+  comments    Comment[]   @relation("BlogComments")
+}
+
+model Comment {
+  id          String    @id @default(cuid())
+  content     String
+  blogPostId  String
+  authorId    String
+  authorName  String
+  authorAvatar String?
+  parentId    String?   // للرد على تعليق آخر
+  isApproved  Boolean   @default(true)  // للإشراف على التعليقات
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  blogPost    BlogPost  @relation("BlogComments", fields: [blogPostId], references: [id], onDelete: Cascade)
+  author      User      @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  parent      Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies     Comment[] @relation("CommentReplies")
+
+  @@index([blogPostId])
+  @@index([parentId])
 }
 
 model Category {
@@ -246,6 +277,140 @@ model FeaturedBlogPost {
   blogPost    BlogPost @relation(fields: [blogPostId], references: [id], onDelete: Cascade)
 }
 
+model SiteSettings {
+  id                        String   @id @default(cuid())
+  siteName                  String   @default("AI Agency")
+  siteDescription           String?  @default("وكالة متخصصة في الذكاء الاصطناعي والتسويق الرقمي")
+  logo                      String?
+  primaryColor             String   @default("#3b82f6")
+  secondaryColor           String   @default("#8b5cf6")
+  
+  // إعدادات العملة
+  defaultCurrency          String   @default("SAR")        // العملة الافتراضية
+  currencySymbol           String   @default("ر.س")        // رمز العملة
+  currencyPosition         String   @default("after")      // موضع العملة: "before" أو "after"
+  decimalPlaces            Int      @default(2)           // عدد الخانات العشرية
+  
+  // معلومات الاتصال
+  phone1                   String?
+  phone2                   String?
+  email1                   String?
+  email2                   String?
+  address                  String?
+  
+  // وسائل التواصل الاجتماعي
+  facebookUrl              String?
+  twitterUrl               String?
+  instagramUrl             String?
+  linkedinUrl              String?
+  whatsappNumber           String?
+  telegramUrl              String?
+  youtubeUrl               String?
+  
+  // محتوى الصفحات
+  privacyPolicyContent     String?
+  termsOfServiceContent    String?
+  aboutUsContent           String?
+  privacyPolicyUrl         String?
+  termsOfServiceUrl        String?
+  
+  // إعدادات الموقع
+  enableRegistration       Boolean  @default(true)
+  enableComments           Boolean  @default(true)
+  enableNewsletter         Boolean  @default(true)
+  defaultUserRole          String   @default("USER")
+  
+  // SEO
+  metaTitle                String?
+  metaDescription          String?
+  metaKeywords             String?
+  
+  updatedById              String?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  updatedBy                User?    @relation("SiteSettingsUpdater", fields: [updatedById], references: [id])
+}
+
+// AI Content Generation & Coins System
+model UserCoins {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  balance         Int      @default(0)      // رصيد الكوينز الحالي
+  totalEarned     Int      @default(0)      // إجمالي الكوينز المكتسبة
+  totalSpent      Int      @default(0)      // إجمالي الكوينز المستخدمة
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CoinTransaction {
+  id              String            @id @default(cuid())
+  userId          String
+  type            CoinTransactionType
+  amount          Int               // مقدار الكوينز (موجب للإضافة، سالب للخصم)
+  reason          String            // سبب المعاملة
+  description     String?           // وصف إضافي
+  relatedId       String?           // ID للعملية المرتبطة (AI content, order, etc.)
+  balanceBefore   Int               // الرصيد قبل المعاملة
+  balanceAfter    Int               // الرصيد بعد المعاملة
+  createdAt       DateTime          @default(now())
+
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AIContent {
+  id              String            @id @default(cuid())
+  userId          String
+  type            AIContentType
+  title           String
+  prompt          String            // النص المدخل من المستخدم
+  content         String            // المحتوى المولد
+  model           String            // نموذج AI المستخدم
+  coinsCost       Int               // عدد الكوينز المستخدمة
+  wordCount       Int?              // عدد الكلمات
+  language        String            @default("ar")
+  isBookmarked    Boolean           @default(false)
+  metadata        String?           // JSON لبيانات إضافية
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CoinPackage {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  coinAmount      Int               // عدد الكوينز في الباقة
+  price           Float             // السعر بالعملة المحلية
+  discount        Float    @default(0)  // نسبة الخصم
+  isPopular       Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  bonusCoins      Int      @default(0)  // كوينز إضافية مجانية
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  purchases       CoinPurchase[]
+}
+
+model CoinPurchase {
+  id              String            @id @default(cuid())
+  userId          String
+  packageId       String
+  coinAmount      Int               // عدد الكوينز المشتراة
+  price           Float             // السعر المدفوع
+  paymentMethod   String?           // طريقة الدفع
+  paymentStatus   PaymentStatus     @default(PENDING)
+  transactionId   String?           // معرف المعاملة من نظام الدفع
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  package         CoinPackage       @relation(fields: [packageId], references: [id])
+}
+
 // Enums
 enum Role {
   USER
@@ -265,4 +430,33 @@ enum BlogStatus {
   APPROVED    // موافق عليه
   REJECTED    // مرفوض
   PUBLISHED   // منشور
+}
+
+enum CoinTransactionType {
+  PURCHASE      // شراء كوينز
+  SPEND         // استخدام كوينز
+  BONUS         // كوينز مجانية
+  REFUND        // استرداد كوينز
+  REWARD        // مكافأة
+}
+
+enum AIContentType {
+  ARTICLE       // مقال
+  BLOG_POST     // مقال مدونة
+  SOCIAL_POST   // منشور وسائل التواصل
+  PRODUCT_DESC  // وصف منتج
+  EMAIL         // بريد إلكتروني
+  AD_COPY       // نص إعلاني
+  SCRIPT        // سكريبت
+  SUMMARY       // ملخص
+  TRANSLATION   // ترجمة
+  REWRITE       // إعادة صياغة
+}
+
+enum PaymentStatus {
+  PENDING       // في انتظار الدفع
+  COMPLETED     // تم الدفع
+  FAILED        // فشل الدفع
+  REFUNDED      // تم الاسترداد
+  CANCELLED     // ملغى
 }

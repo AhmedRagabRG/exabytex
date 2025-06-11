@@ -80,6 +80,12 @@
     --tw-space-x-reverse: 1;
   }
 
+  /* Enhanced RTL support */
+  .dir-rtl {
+    direction: rtl;
+    text-align: right;
+  }
+
   /* Custom scrollbar */
   ::-webkit-scrollbar {
     width: 8px;

@@ -7,11 +7,18 @@ import { CreditCard, User, Phone, Loader2, ShoppingBag } from 'lucide-react';
 import { useCart } from '@/components/providers/cart-provider';
 import { useSession } from 'next-auth/react';
 
+import { PriceDisplay, SimplePrice } from '@/components/ui/PriceDisplay'
+import { CurrencyConverter } from '@/components/ui/CurrencyConverter'
+import { CountrySelector, COUNTRIES, type Country } from '@/components/ui/CountrySelector'
+import { CurrencyConversionModal } from '@/components/ui/CurrencyConversionModal'
+import { EgpPaymentModal } from '@/components/ui/EgpPaymentModal'
+
 interface CheckoutFormData {
   firstName: string;
   lastName: string;
   email: string;
   phone: string;
+  phoneCountry: Country;
   paymentMethod: 'card';
 }
 
@@ -21,18 +28,30 @@ export default function CheckoutPage() {
   const { items, isLoading: cartLoading } = useCart();
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [currencyConversion, setCurrencyConversion] = useState<{
+    originalAmount: number;
+    originalCurrency: string;
+    kashierAmount: number;
+    kashierCurrency: string;
+    exchangeRate?: number;
+    isLiveRate: boolean;
+  } | null>(null);
+  const [showConversionModal, setShowConversionModal] = useState(false);
+  const [showEgpModal, setShowEgpModal] = useState(false);
+
   
   const [formData, setFormData] = useState<CheckoutFormData>({
     firstName: '',
     lastName: '',
     email: '',
     phone: '',
+    phoneCountry: COUNTRIES[0], // مصر كافتراضي
     paymentMethod: 'card'
   });
 
   const calculateSubtotal = () => {
     return items.reduce((total, item) => {
-      return total + (item.product.price * item.quantity);
+      return total + (item.price * item.quantity);
     }, 0);
   };
 
@@ -51,6 +70,50 @@ export default function CheckoutPage() {
     }
   }, [items, router, status, cartLoading]);
 
+  // جلب معلومات تحويل العملة عند تحميل الصفحة
+  useEffect(() => {
+    const fetchCurrencyInfo = async () => {
+      try {
+        // جلب إعدادات العملة من API
+        const settingsResponse = await fetch('/api/settings/currency');
+        if (!settingsResponse.ok) return;
+        
+        const settingsData = await settingsResponse.json();
+        const currency = settingsData.settings.defaultCurrency;
+        
+        // إذا العملة مش جنيه مصري، جلب معلومات التحويل
+        if (currency !== 'EGP' && totalAmount > 0) {
+          const conversionResponse = await fetch('/api/kashier/currency-conversion', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amount: totalAmount })
+          });
+          
+          if (conversionResponse.ok) {
+            const conversionData = await conversionResponse.json();
+            setCurrencyConversion(conversionData);
+            // عرض المودال إذا كانت هناك حاجة لتحويل العملة
+            if (conversionData.originalCurrency !== 'EGP') {
+              const hideModal = sessionStorage.getItem('hideConversionModal');
+              if (!hideModal) {
+                setShowConversionModal(true);
+              }
+            }
+          }
+        } else if (currency === 'EGP' && totalAmount > 0) {
+          // إذا العملة جنيه مصري، عرض مودال التأكيد
+          setShowEgpModal(true);
+        }
+      } catch (error) {
+        console.error('Error fetching currency info:', error);
+      }
+    };
+
+    if (totalAmount > 0) {
+      fetchCurrencyInfo();
+    }
+  }, [totalAmount]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -68,7 +131,7 @@ export default function CheckoutPage() {
     if (!formData.email.trim()) newErrors.email = 'البريد الإلكتروني مطلوب';
     else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'البريد الإلكتروني غير صحيح';
     if (!formData.phone.trim()) newErrors.phone = 'رقم الهاتف مطلوب';
-    else if (!/^(\+201|01)[0-9]{9}$/.test(formData.phone)) newErrors.phone = 'رقم الهاتف غير صحيح';
+    else if (!/^[0-9]{7,15}$/.test(formData.phone.replace(/\s/g, ''))) newErrors.phone = 'رقم الهاتف غير صحيح (7-15 رقم)';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -85,13 +148,18 @@ export default function CheckoutPage() {
       const orderData = {
         items: items.map(item => ({
           id: item.id,
-          name: item.product.title,
-          price: item.product.price,
-          originalPrice: item.product.price,
+          name: item.name,
+          price: item.price,
+          originalPrice: item.price,
           quantity: item.quantity,
-          image: item.product.image || ''
+          image: item.image || ''
         })),
-        customer: formData,
+        customer: {
+          ...formData,
+          phone: `${formData.phoneCountry.phoneCode}${formData.phone}`,
+          country: formData.phoneCountry.nameAr,
+          countryCode: formData.phoneCountry.code
+        },
         totals: {
           subtotal,
           deliveryFee: 0,
@@ -112,8 +180,18 @@ export default function CheckoutPage() {
       console.log('Kashier Response:', result);
 
       if (result.success && result.paymentUrl && result.paymentUrl !== '#') {
-        localStorage.setItem('pendingOrderId', result.orderId);
-        window.location.href = result.paymentUrl;
+        // حفظ معلومات التحويل إذا كانت موجودة
+        if (result.currencyConversion && result.currencyConversion.originalCurrency !== 'EGP') {
+          setCurrencyConversion(result.currencyConversion);
+          // تأخير التحويل لثانيتين لعرض معلومات التحويل
+          setTimeout(() => {
+            localStorage.setItem('pendingOrderId', result.orderId);
+            window.location.href = result.paymentUrl;
+          }, 3000);
+        } else {
+          localStorage.setItem('pendingOrderId', result.orderId);
+          window.location.href = result.paymentUrl;
+        }
       } else {
         alert('إعدادات كاشير غير مكتملة. تأكد من إضافة بيانات كاشير في متغيرات البيئة.');
         console.error('Kashier settings incomplete:', result);
@@ -246,19 +324,32 @@ export default function CheckoutPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       رقم الهاتف
                     </label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        errors.phone ? 'border-red-500' : 'border-gray-300'
-                      }`}
-                      placeholder="01234567890"
-                    />
+                    <div className="flex gap-2">
+                      <div className="w-40">
+                        <CountrySelector
+                          selectedCountry={formData.phoneCountry}
+                          onCountryChange={(country) => setFormData(prev => ({ ...prev, phoneCountry: country }))}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <input
+                          type="tel"
+                          name="phone"
+                          value={formData.phone}
+                          onChange={handleInputChange}
+                          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                            errors.phone ? 'border-red-500' : 'border-gray-300'
+                          }`}
+                          placeholder="123456789"
+                        />
+                      </div>
+                    </div>
                     {errors.phone && (
                       <p className="text-red-500 text-sm mt-1">{errors.phone}</p>
                     )}
+                    <p className="text-xs text-gray-500 mt-1">
+                      مثال: {formData.phoneCountry.phoneCode} 123456789
+                    </p>
                   </div>
                 </div>
               </div>
@@ -274,7 +365,7 @@ export default function CheckoutPage() {
                     <span className="font-medium">دفع فوري بالبطاقة</span>
                   </div>
                   <p className="text-sm text-blue-700 mt-1">
-                    Visa, Mastercard, فودافون كاش، أورانج موني
+                    Visa, Mastercard
                   </p>
                   <p className="text-xs text-gray-600 mt-2">
                     المنتجات الرقمية تتطلب الدفع الفوري
@@ -292,6 +383,8 @@ export default function CheckoutPage() {
                 </ul>
               </div>
 
+
+
               <button
                 type="submit"
                 disabled={isLoading}
@@ -300,10 +393,12 @@ export default function CheckoutPage() {
                 {isLoading ? (
                   <div className="flex items-center justify-center">
                     <Loader2 className="animate-spin h-5 w-5 ml-2" />
-                    جاري الاتصال بكاشير...
+                    {currencyConversion ? 'جاري التحويل لكاشير...' : 'جاري الاتصال بكاشير...'}
                   </div>
                 ) : (
-                  `إتمام الدفع - ${totalAmount.toFixed(2)} ج.م`
+                  <div className="flex items-center justify-center">
+                    إتمام الدفع - <SimplePrice amount={totalAmount} className="text-white" />
+                  </div>
                 )}
               </button>
             </form>
@@ -317,10 +412,10 @@ export default function CheckoutPage() {
                 <div key={item.id} className="flex items-center space-x-4 rtl:space-x-reverse">
                   <div className="flex-shrink-0">
                     <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
-                      {item.product.image ? (
+                      {item.image ? (
                         <Image 
-                          src={item.product.image} 
-                          alt={item.product.title}
+                          src={item.image} 
+                          alt={item.name}
                           width={64}
                           height={64}
                           className="w-full h-full object-cover"
@@ -332,39 +427,51 @@ export default function CheckoutPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <h4 className="text-sm font-medium text-gray-900 truncate">
-                      {item.product.title}
+                      {item.name}
                     </h4>
                     <p className="text-sm text-gray-500">الكمية: {item.quantity}</p>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-gray-900">
-                        {item.product.price.toFixed(2)} ج.م
-                      </span>
+                      <SimplePrice amount={item.price} className="text-gray-900" />
                       <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">
                         منتج رقمي
                       </span>
                     </div>
                   </div>
                   <div className="text-sm font-medium text-gray-900">
-                    {(item.product.price * item.quantity).toFixed(2)} ج.م
+                    <SimplePrice amount={item.price * item.quantity} className="text-gray-900" />
                   </div>
                 </div>
               ))}
             </div>
 
             <div className="border-t border-gray-200 pt-4 space-y-2">
-              <div className="flex justify-between text-sm">
+              <div className="flex justify-between text-sm dir-rtl">
                 <span>المجموع الفرعي:</span>
-                <span>{subtotal.toFixed(2)} ج.م</span>
+                <SimplePrice amount={subtotal} className="text-gray-900" />
               </div>
-              <div className="flex justify-between text-sm">
+              <div className="flex justify-between text-sm dir-rtl">
                 <span>رسوم الشحن:</span>
                 <span className="text-green-600 font-medium">مجاني (منتجات رقمية)</span>
               </div>
-              <div className="flex justify-between text-lg font-semibold border-t border-gray-200 pt-2">
+              <div className="flex justify-between text-lg font-semibold border-t border-gray-200 pt-2 dir-rtl">
                 <span>المجموع الكلي:</span>
-                <span className="text-blue-600">{totalAmount.toFixed(2)} ج.م</span>
+                <PriceDisplay amount={totalAmount} size="md" className="text-blue-600" />
               </div>
             </div>
+
+            {/* معلومات تحويل العملة */}
+            {currencyConversion && currencyConversion.originalCurrency !== 'EGP' && (
+              <div className="mt-6">
+                <CurrencyConverter
+                  originalAmount={currencyConversion.originalAmount}
+                  originalCurrency={currencyConversion.originalCurrency}
+                  convertedAmount={currencyConversion.kashierAmount}
+                  convertedCurrency={currencyConversion.kashierCurrency}
+                  exchangeRate={currencyConversion.exchangeRate}
+                  isLiveRate={currencyConversion.isLiveRate}
+                />
+              </div>
+            )}
 
             <div className="mt-6 p-4 bg-green-50 rounded-lg">
               <h4 className="text-sm font-medium text-green-900 mb-2">مميزات المنتجات الرقمية:</h4>
@@ -378,6 +485,27 @@ export default function CheckoutPage() {
           </div>
         </div>
       </div>
+
+      {/* Currency Conversion Modal */}
+      {currencyConversion && (
+        <CurrencyConversionModal
+          isOpen={showConversionModal}
+          onClose={() => setShowConversionModal(false)}
+          originalAmount={currencyConversion.originalAmount}
+          originalCurrency={currencyConversion.originalCurrency}
+          convertedAmount={currencyConversion.kashierAmount}
+          convertedCurrency={currencyConversion.kashierCurrency}
+          exchangeRate={currencyConversion.exchangeRate}
+          isLiveRate={currencyConversion.isLiveRate}
+        />
+      )}
+
+      {/* EGP Payment Modal */}
+      <EgpPaymentModal
+        isOpen={showEgpModal}
+        onClose={() => setShowEgpModal(false)}
+        amount={totalAmount}
+      />
     </div>
   );
 }

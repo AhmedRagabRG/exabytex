@@ -1,7 +1,6 @@
 import Link from "next/link"
 import { 
   Facebook, 
-  Twitter, 
   Instagram, 
   Linkedin, 
   Mail, 
@@ -36,10 +35,9 @@ export function Footer() {
   ]
 
   const socialLinks = [
-    { name: "Facebook", icon: Facebook, href: "#", gradient: "from-blue-600 to-blue-500" },
-    { name: "Twitter", icon: Twitter, href: "#", gradient: "from-sky-500 to-blue-500" },
-    { name: "Instagram", icon: Instagram, href: "#", gradient: "from-pink-500 to-purple-500" },
-    { name: "LinkedIn", icon: Linkedin, href: "#", gradient: "from-blue-700 to-blue-600" },
+    { name: "Facebook", icon: Facebook, href: "https://www.facebook.com/exabytex", gradient: "from-blue-600 to-blue-500" },
+    { name: "Instagram", icon: Instagram, href: "https://www.instagram.com/exabytex.ai/", gradient: "from-pink-500 to-purple-500" },
+    { name: "LinkedIn", icon: Linkedin, href: "https://www.linkedin.com/company/exabytex", gradient: "from-blue-700 to-blue-600" },
   ]
 
   return (
@@ -145,6 +143,7 @@ export function Footer() {
                   <a 
                     key={index}
                     href={social.href} 
+                    target="_blank"
                     className="group relative"
                     aria-label={social.name}
                   >
@@ -223,13 +222,11 @@ export function Footer() {
                   صُنع بـ <Heart className="w-4 h-4 inline text-red-500" /> في exabytex
                 </span>
               </div>
+
               <div className="flex items-center gap-6 text-sm text-gray-400">
                 <Link href="#" className="hover:text-white transition-colors">سياسة الخصوصية</Link>
+                <Link href="#" className="hover:text-white transition-colors">سياسة الاسترداد</Link>
                 <Link href="#" className="hover:text-white transition-colors">شروط الاستخدام</Link>
-                <div className="flex items-center gap-2">
-                  <Code className="w-4 h-4" />
-                  <span>Next.js + AI</span>
-                </div>
               </div>
             </div>
           </div>
