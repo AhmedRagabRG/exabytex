@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from '@/lib/auth';
 import { PrismaClient } from '@prisma/client';
 import { getCurrencySettings, updateCurrencySettings, SUPPORTED_CURRENCIES } from '@/lib/currency';
+import { Session } from 'next-auth';
 
 const prisma = new PrismaClient();
 
@@ -27,7 +28,7 @@ export async function GET() {
 // تحديث إعدادات العملة (للمدراء فقط)
 export async function PUT(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(authOptions) as Session;
     
     if (!session?.user?.email) {
       return NextResponse.json(

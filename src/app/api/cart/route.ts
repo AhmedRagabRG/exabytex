@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { Session } from 'next-auth';
 
 // Get cart items
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(authOptions) as Session;
     
     if (!session?.user?.email) {
       return NextResponse.json({ success: true, cart: [] });
@@ -48,7 +49,7 @@ export async function GET() {
 // Update cart (for localStorage sync) or Add single product
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(authOptions) as Session;
     
     if (!session?.user?.email) {
       return NextResponse.json({ success: true });
@@ -219,7 +220,7 @@ export async function POST(request: NextRequest) {
 // Add single item to cart (for backward compatibility)
 export async function PUT(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(authOptions) as Session;
     
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'غير مسموح' }, { status: 401 });

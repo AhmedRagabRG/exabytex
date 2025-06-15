@@ -3,6 +3,7 @@ import { EXCHANGE_RATES, getLiveExchangeRates, updateExchangeRates } from '@/lib
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { Session } from 'next-auth';
 
 // GET - الحصول على أسعار الصرف الحالية
 export async function GET() {
@@ -33,7 +34,7 @@ export async function GET() {
 // POST - تحديث أسعار الصرف من API (للمشرفين فقط)
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(authOptions) as Session;
     
     // التحقق من صلاحيات المشرف
     if (!session?.user?.email) {
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
 // PUT - تحديث سعر صرف عملة محددة
 export async function PUT(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(authOptions) as Session;
     
     if (!session?.user?.email) {
       return NextResponse.json({

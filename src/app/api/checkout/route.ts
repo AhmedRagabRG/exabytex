@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { Session } from 'next-auth';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(authOptions) as Session;
     
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'غير مسموح' }, { status: 401 });
@@ -17,7 +18,7 @@ export async function POST(request: NextRequest) {
     // البحث عن المستخدم
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      include: { userCoins: true }
+      include: { coins: true }
     });
 
     if (!user) {
@@ -37,20 +38,19 @@ export async function POST(request: NextRequest) {
       if (!product) continue;
 
       // التحقق من نوع المنتج
-      const metadata = product.metadata ? JSON.parse(product.metadata) : {};
-      const isCoinProduct = product.category === 'كوينز' || metadata.type === 'coins';
+      const isCoinProduct = product.category === 'كوينز';
 
-      if (isCoinProduct) {
-        const coinAmount = metadata.coinAmount || parseInt(product.title?.match(/\d+/)?.[0] || '0');
-        totalCoinsToAdd += coinAmount * item.quantity;
-        coinProducts.push({
-          ...item,
-          product,
-          coinAmount: coinAmount * item.quantity
-        });
-      } else {
-        regularProducts.push({ ...item, product });
-      }
+              if (isCoinProduct) {
+          const coinAmount = parseInt(product.title?.match(/\d+/)?.[0] || '0');
+          totalCoinsToAdd += coinAmount * item.quantity;
+          coinProducts.push({
+            ...item,
+            product,
+            coinAmount: coinAmount * item.quantity
+          });
+        } else {
+          regularProducts.push({ ...item, product });
+        }
     }
 
     // إنشاء الطلب
@@ -59,11 +59,6 @@ export async function POST(request: NextRequest) {
         userId: user.id,
         total: total,
         status: 'PENDING',
-        paymentMethod: paymentMethod,
-        shippingAddress: JSON.stringify({
-          type: coinProducts.length > 0 ? 'digital' : 'physical',
-          note: coinProducts.length > 0 ? `سيتم إضافة ${totalCoinsToAdd} كوين للحساب` : ''
-        }),
         items: {
           create: items.map((item: any) => ({
             productId: item.productId,
@@ -81,10 +76,10 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // إذا كان الطلب يحتوي على كوينز وتم الدفع (في التطبيق الحقيقي سيكون بعد تأكيد الدفع)
-    if (totalCoinsToAdd > 0) {
-      // التأكد من وجود حساب كوينز للمستخدم
-      let userCoinsAccount = user.userCoins;
+          // إذا كان الطلب يحتوي على كوينز وتم الدفع (في التطبيق الحقيقي سيكون بعد تأكيد الدفع)
+      if (totalCoinsToAdd > 0) {
+        // التأكد من وجود حساب كوينز للمستخدم
+        let userCoinsAccount = user.coins;
       if (!userCoinsAccount) {
         userCoinsAccount = await prisma.userCoins.create({
           data: {
@@ -112,8 +107,7 @@ export async function POST(request: NextRequest) {
           type: 'PURCHASE',
           amount: totalCoinsToAdd,
           reason: `شراء كوينز - طلب رقم ${order.id}`,
-          balanceAfter: userCoinsAccount.balance + totalCoinsToAdd,
-          orderId: order.id
+          balanceAfter: userCoinsAccount.balance + totalCoinsToAdd
         }
       });
 
@@ -121,11 +115,7 @@ export async function POST(request: NextRequest) {
       await prisma.order.update({
         where: { id: order.id },
         data: { 
-          status: 'COMPLETED', // الكوينز فورية
-          metadata: JSON.stringify({
-            coinsAdded: totalCoinsToAdd,
-            autoCompleted: true
-          })
+          status: 'COMPLETED' // الكوينز فورية
         }
       });
     }

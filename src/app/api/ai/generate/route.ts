@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import OpenAI from 'openai';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { Session } from 'next-auth';
 
 // تهيئة محركات AI
 const openai = new OpenAI({
@@ -73,7 +74,7 @@ const PROMPTS = {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(authOptions) as Session;
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
     }

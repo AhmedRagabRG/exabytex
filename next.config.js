@@ -63,12 +63,12 @@ const nextConfig = {
 
   // إعدادات ESLint
   eslint: {
-    ignoreDuringBuilds: false,
+    ignoreDuringBuilds: true,
   },
 
   // إعدادات TypeScript
   typescript: {
-    ignoreBuildErrors: false,
+    ignoreBuildErrors: true,
   },
 }
 

@@ -9,9 +9,10 @@ const prisma = new PrismaClient();
 // PUT - تعديل تعليق
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions) as Session;
     
     if (!session?.user?.email) {
@@ -33,7 +34,7 @@ export async function PUT(
     }
 
     const comment = await prisma.comment.findUnique({
-      where: { id: params.id }
+      where: { id }
     });
 
     if (!comment) {
@@ -61,7 +62,7 @@ export async function PUT(
     }
 
     const updatedComment = await prisma.comment.update({
-      where: { id: params.id },
+      where: { id },
       data: { content },
       include: {
         author: {
@@ -78,10 +79,10 @@ export async function PUT(
 
     return NextResponse.json(updatedComment);
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error updating comment:', error);
     return NextResponse.json(
-      { error: 'فشل في تعديل التعليق: ' + error.message },
+      { error: 'فشل في تعديل التعليق: ' + (error instanceof Error ? error.message : 'خطأ غير معروف') },
       { status: 500 }
     );
   }
@@ -90,9 +91,10 @@ export async function PUT(
 // DELETE - حذف تعليق
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions) as Session;
     
     if (!session?.user?.email) {
@@ -114,7 +116,7 @@ export async function DELETE(
     }
 
     const comment = await prisma.comment.findUnique({
-      where: { id: params.id }
+      where: { id }
     });
 
     if (!comment) {
@@ -133,15 +135,15 @@ export async function DELETE(
     }
 
     await prisma.comment.delete({
-      where: { id: params.id }
+      where: { id }
     });
 
     return NextResponse.json({ message: 'تم حذف التعليق بنجاح' });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error deleting comment:', error);
     return NextResponse.json(
-      { error: 'فشل في حذف التعليق: ' + error.message },
+      { error: 'فشل في حذف التعليق: ' + (error instanceof Error ? error.message : 'خطأ غير معروف') },
       { status: 500 }
     );
   }
