@@ -30,11 +30,8 @@ function getBaseUrl(): string {
     return process.env.NEXT_PUBLIC_BASE_URL;
   }
   
-  if (KASHIER_CONFIG.isTestMode) {
-    return 'https://test-payments.example.com';
-  }
-  
-  return process.env.NEXT_PUBLIC_BASE_URL || 'https://exabytex.com';
+  // كاشير يرفض localhost URLs، لذا استخدم domain حقيقي دائماً
+  return 'https://exabytex.com';
 }
 
 export async function POST(request: NextRequest) {

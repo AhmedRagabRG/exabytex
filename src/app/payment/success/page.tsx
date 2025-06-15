@@ -12,9 +12,20 @@ function PaymentSuccessContent() {
   const [orderData, setOrderData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const orderId = searchParams.get('orderId');
+  // كاشير بيبعت parameters مختلفة في الـ return URL
+  const orderId = searchParams.get('orderId') || 
+                  searchParams.get('order_id') || 
+                  searchParams.get('reference') ||
+                  searchParams.get('orderNo');
 
   useEffect(() => {
+    // طباعة جميع الـ parameters للـ debugging
+    console.log('=== Payment Success URL Parameters ===');
+    for (const [key, value] of searchParams.entries()) {
+      console.log(`${key}: ${value}`);
+    }
+    console.log('====================================');
+
     // إطلاق تأثير الاحتفال
     const duration = 3000;
     const animationEnd = Date.now() + duration;
@@ -236,8 +247,8 @@ function PaymentSuccessContent() {
                 فريق الدعم متاح لمساعدتك في أي استفسار
               </p>
               <div className="space-y-2 text-sm">
-                <p className="text-gray-700">📧 support@aiagency.com</p>
-                <p className="text-gray-700">📞 +20 1234567890</p>
+                <p className="text-gray-700">📧 info@exabytex.com</p>
+                <p className="text-gray-700">📞 +20 1555831761</p>
                 <p className="text-gray-700">💬 الدردشة المباشرة متاحة 24/7</p>
               </div>
             </div>

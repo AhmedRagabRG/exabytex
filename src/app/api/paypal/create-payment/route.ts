@@ -16,7 +16,7 @@ function getBaseUrl(): string {
   }
   
   if (PAYPAL_CONFIG.isTestMode) {
-    return 'https://test-payments.example.com';
+    return 'https://test-checkout.example.com';
   }
   
   return process.env.NEXT_PUBLIC_BASE_URL || 'https://exabytex.com';

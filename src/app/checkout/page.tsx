@@ -138,7 +138,7 @@ export default function CheckoutPage() {
     if (!formData.email.trim()) newErrors.email = 'البريد الإلكتروني مطلوب';
     else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'البريد الإلكتروني غير صحيح';
     if (!formData.phone.trim()) newErrors.phone = 'رقم الهاتف مطلوب';
-    else if (!/^[0-9]{7,15}$/.test(formData.phone.replace(/\s/g, ''))) newErrors.phone = 'رقم الهاتف غير صحيح (7-15 رقم)';
+    else if (!/^[0-9]{7,15}$/.test(formData.phone.replace(/[\s\-\(\)]/g, ''))) newErrors.phone = 'رقم الهاتف غير صحيح (7-15 رقم)';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -151,7 +151,18 @@ export default function CheckoutPage() {
                    formData.email.trim() !== '' &&
                    /\S+@\S+\.\S+/.test(formData.email) &&
                    formData.phone.trim() !== '' &&
-                   /^[0-9]{7,15}$/.test(formData.phone.replace(/\s/g, ''));
+                   /^[0-9]{7,15}$/.test(formData.phone.replace(/[\s\-\(\)]/g, ''));
+                   
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Form validation:', {
+        firstName: formData.firstName.trim() !== '',
+        lastName: formData.lastName.trim() !== '', 
+        email: /\S+@\S+\.\S+/.test(formData.email),
+        phone: /^[0-9]{7,15}$/.test(formData.phone.replace(/[\s\-\(\)]/g, '')),
+        cleanPhone: formData.phone.replace(/[\s\-\(\)]/g, ''),
+        isValid
+      });
+    }
                    
     setIsFormValid(isValid);
   }, [formData]);
@@ -159,7 +170,13 @@ export default function CheckoutPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) return;
+    // التحقق من صحة البيانات أولاً
+    if (!isFormValid || !validateForm()) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Form validation failed:', { isFormValid, errors });
+      }
+      return;
+    }
 
     setIsLoading(true);
 
@@ -187,7 +204,9 @@ export default function CheckoutPage() {
         paymentMethod: formData.paymentMethod
       };
 
-      console.log('Sending order data:', orderData);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Sending order data:', orderData);
+      }
 
       // Handle different payment methods
       if (formData.paymentMethod === 'card') {
@@ -199,7 +218,10 @@ export default function CheckoutPage() {
         });
 
         const result = await paymentResponse.json();
-        console.log('Kashier Legacy UI Response:', result);
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Kashier Legacy UI Response:', result);
+        }
         
         if (result.success && result.paymentUrl && result.paymentUrl !== '#') {
           // حفظ معلومات التحويل إذا كانت موجودة
@@ -302,7 +324,19 @@ export default function CheckoutPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="bg-white rounded-xl shadow-sm p-6">
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form 
+              onSubmit={handleSubmit} 
+              onKeyDown={(e) => {
+                // منع الـ Enter submission إذا كان الـ form غير صحيح
+                if (e.key === 'Enter' && !isFormValid) {
+                  e.preventDefault();
+                  if (process.env.NODE_ENV === 'development') {
+                    console.log('Enter blocked - form not valid');
+                  }
+                }
+              }}
+              className="space-y-6"
+            >
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                   <User className="h-5 w-5 ml-2" />
@@ -520,13 +554,21 @@ export default function CheckoutPage() {
               {formData.paymentMethod === 'card' && (
                 <button
                   type="submit"
-                  disabled={isLoading}
-                  className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  disabled={isLoading || !isFormValid}
+                  className={`w-full py-3 px-4 rounded-lg font-semibold focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
+                    isFormValid 
+                      ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                      : 'bg-gray-300 text-gray-500'
+                  }`}
                 >
                   {isLoading ? (
                     <div className="flex items-center justify-center">
                       <Loader2 className="animate-spin h-5 w-5 ml-2" />
                       {currencyConversion ? 'جاري التحويل لكاشير...' : 'جاري الاتصال بكاشير...'}
+                    </div>
+                  ) : !isFormValid ? (
+                    <div className="flex items-center justify-center">
+                      يرجى ملء جميع البيانات المطلوبة
                     </div>
                   ) : (
                     <div className="flex items-center justify-center">
