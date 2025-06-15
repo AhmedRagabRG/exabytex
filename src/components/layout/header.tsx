@@ -61,7 +61,8 @@ export function Header() {
       name: "مولد المحتوى", 
       href: "/ai-content", 
       icon: Brain,
-      gradient: "from-orange-500 to-red-500" 
+      gradient: "from-orange-500 to-red-500",
+      hideOnTablet: true 
     },
     { 
       name: "المدونة", 
@@ -75,7 +76,13 @@ export function Header() {
       icon: Bot,
       gradient: "from-indigo-500 to-purple-500" 
     },
-  ]
+  ] as Array<{
+    name: string;
+    href: string;
+    icon: any;
+    gradient: string;
+    hideOnTablet?: boolean;
+  }>
 
   return (
     <header className={`relative text-white sticky top-0 z-50 transition-all duration-500 ${
@@ -93,7 +100,7 @@ export function Header() {
       </div>
 
       <nav className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className={`flex justify-between transition-all duration-500 ${
+        <div className={`flex justify-between items-center transition-all duration-500 ${
           isScrolled ? 'h-16' : 'h-20'
         }`}>
           {/* Logo */}
@@ -101,10 +108,10 @@ export function Header() {
             <Link href="/" className="group flex items-center space-x-3 rtl:space-x-reverse">
               <div className="relative">
                 <div className={`bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-xl flex items-center justify-center transform group-hover:scale-110 transition-all duration-500 shadow-lg ${
-                  isScrolled ? 'w-10 h-10' : 'w-12 h-12'
+                  isScrolled ? 'w-8 h-8 md:w-10 md:h-10' : 'w-10 h-10 md:w-12 md:h-12'
                 }`}>
                   <Brain className={`text-white transition-all duration-500 ${
-                    isScrolled ? 'w-5 h-5' : 'w-6 h-6'
+                    isScrolled ? 'w-4 h-4 md:w-5 md:h-5' : 'w-5 h-5 md:w-6 md:h-6'
                   }`} />
                 </div>
                 {/* Floating sparkles */}
@@ -117,13 +124,13 @@ export function Header() {
               </div>
               <div className="flex flex-col">
                 <span className={`font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent transition-all duration-500 ${
-                  isScrolled ? 'text-xl' : 'text-2xl'
+                  isScrolled ? 'text-lg md:text-xl' : 'text-xl md:text-2xl'
                 }`}>
                   Exa Bytex
                 </span>
                 <span className={`text-gray-400 font-medium transition-all duration-500 ${
                   isScrolled ? 'text-xs opacity-70' : 'text-xs'
-                }`}>
+                } hidden md:block`}>
                   مستقبل الذكاء الاصطناعي
                 </span>
               </div>
@@ -131,19 +138,21 @@ export function Header() {
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center space-x-1 rtl:space-x-reverse">
+          <div className="hidden md:flex items-center space-x-0.5 lg:space-x-1 rtl:space-x-reverse">
             {navigation.map((item) => (
               <Link
                 key={item.name}
                 href={item.href}
-                className="group relative px-4 py-2 rounded-xl transition-all duration-300 hover:bg-white/10"
+                className={`group relative px-1 md:px-2 lg:px-4 py-2 rounded-xl transition-all duration-300 hover:bg-white/10 ${
+                  item.hideOnTablet ? 'hidden lg:flex' : 'flex'
+                }`}
                 aria-label={item.name}
               >
-                <div className="flex items-center gap-2">
-                  <div className={`w-6 h-6 rounded-lg bg-gradient-to-r ${item.gradient} flex items-center justify-center opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300`}>
-                    <item.icon className="w-3 h-3 text-white" />
+                <div className="flex items-center gap-1 lg:gap-2">
+                  <div className={`w-5 h-5 lg:w-6 lg:h-6 rounded-lg bg-gradient-to-r ${item.gradient} flex items-center justify-center opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300`}>
+                    <item.icon className="w-2.5 h-2.5 lg:w-3 lg:h-3 text-white" />
                   </div>
-                  <span className="text-sm font-medium text-gray-300 group-hover:text-white transition-colors">
+                  <span className="text-xs lg:text-sm font-medium text-gray-300 group-hover:text-white transition-colors whitespace-nowrap">
                     {item.name}
                   </span>
                 </div>
@@ -158,7 +167,7 @@ export function Header() {
           </div>
 
           {/* Desktop Actions */}
-          <div className="hidden lg:flex items-center space-x-3 rtl:space-x-reverse">
+          <div className="hidden md:flex items-center space-x-1 lg:space-x-3 rtl:space-x-reverse">
             {/* Coins Link for Logged In Users */}
             {/* Cart Icon with Badge */}
             <NoSSR fallback={
@@ -167,14 +176,13 @@ export function Header() {
               </Button>
             }>
               <Link href="/cart" aria-label="عرض السلة">
-                <Button variant="ghost" size="icon" aria-label={`عرض السلة - ${items.length} عناصر`} className="relative group hover:bg-white/10 transition-all duration-300">
+                <Button variant="ghost" size="icon" aria-label={`عرض السلة - ${items.length} عناصر`} className="relative group hover:bg-white/10 transition-all duration-300 flex items-center justify-center">
                   <ShoppingCart className="h-5 w-5 text-gray-300 group-hover:text-white group-hover:scale-110 transition-all duration-300" />
                   {items.length > 0 && (
                     <span className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse font-bold">
                       {items.length}
                     </span>
                   )}
-                  <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 </Button>
               </Link>
             </NoSSR>
@@ -193,37 +201,43 @@ export function Header() {
               </div>
             }>
               {session ? (
-                <div className="flex items-center space-x-3 rtl:space-x-reverse">
+                <div className="flex items-center space-x-1 lg:space-x-3 rtl:space-x-reverse">
                   <Link href="/dashboard" aria-label="لوحة التحكم">
                     <Button variant="ghost" size="icon" aria-label="لوحة التحكم" className="relative group hover:bg-white/10 transition-all duration-300">
-                      <User className="h-5 w-5 text-gray-300 group-hover:text-white group-hover:scale-110 transition-all duration-300" />
+                      <User className="h-4 w-4 lg:h-5 lg:w-5 text-gray-300 group-hover:text-white group-hover:scale-110 transition-all duration-300" />
                       <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-green-500/20 to-emerald-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     </Button>
                   </Link>
                   <Button 
                     variant="outline" 
+                    size="sm"
                     onClick={() => signOut()}
                     aria-label="تسجيل الخروج"
-                    className="flex items-center space-x-2 rtl:space-x-reverse border-white/30 text-gray-300 hover:text-white hover:bg-red-500 hover:border-red-500 transition-all duration-300"
+                    className="flex items-center space-x-1 lg:space-x-2 rtl:space-x-reverse border-white/30 text-gray-300 hover:text-white hover:bg-red-500 hover:border-red-500 transition-all duration-300 text-xs lg:text-sm px-2 lg:px-4"
                   >
-                    <LogOut className="h-4 w-4" />
+                    <LogOut className="h-3 w-3 lg:h-4 lg:w-4" />
                     <span>خروج</span>
                   </Button>
                 </div>
               ) : (
-                <div className="flex items-center space-x-3 rtl:space-x-reverse">
+                <div className="flex items-center space-x-1 lg:space-x-3 rtl:space-x-reverse">
                   <Link href="/auth/signin">
                     <Button 
                       variant="outline" 
-                      className="border-white/30 text-gray-300 hover:bg-white hover:text-slate-900 transition-all duration-300"
+                      size="sm"
+                      className="border-white/30 text-gray-300 hover:bg-white hover:text-slate-900 transition-all duration-300 text-xs lg:text-sm px-2 lg:px-4"
                     >
-                      تسجيل الدخول
+                      دخول
                     </Button>
                   </Link>
                   <Link href="/auth/signup">
-                    <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white transform hover:scale-105 transition-all duration-300 shadow-lg">
-                      <Sparkles className="w-4 h-4 ml-2 text-white" />
-                      إنشاء حساب
+                    <Button 
+                      size="sm"
+                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white transform hover:scale-105 transition-all duration-300 shadow-lg text-xs lg:text-sm px-2 lg:px-4"
+                    >
+                      <Sparkles className="w-3 h-3 lg:w-4 lg:h-4 ml-1 lg:ml-2 text-white" />
+                      <span className="hidden lg:inline">إنشاء حساب</span>
+                      <span className="lg:hidden">حساب</span>
                     </Button>
                   </Link>
                 </div>
@@ -232,13 +246,32 @@ export function Header() {
           </div>
 
           {/* Mobile menu button */}
-          <div className="md:hidden">
+          <div className="md:hidden flex items-center space-x-2 rtl:space-x-reverse">
+            {/* Mobile Cart Icon */}
+            <NoSSR fallback={
+              <Button variant="ghost" size="icon" className="relative hover:bg-white/10 transition-colors">
+                <ShoppingCart className="h-5 w-5 text-gray-300" />
+              </Button>
+            }>
+              <Link href="/cart" aria-label="عرض السلة">
+                <Button variant="ghost" size="icon" aria-label={`عرض السلة - ${items.length} عناصر`} className="relative group hover:bg-white/10 transition-all duration-300 flex items-center justify-center">
+                  <ShoppingCart className="h-5 w-5 text-gray-300 group-hover:text-white group-hover:scale-110 transition-all duration-300" />
+                  {items.length > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse font-bold">
+                      {items.length}
+                    </span>
+                  )}
+                </Button>
+              </Link>
+            </NoSSR>
+            
+            {/* Menu Button */}
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={() => setIsOpen(!isOpen)}
               aria-label={isOpen ? "إغلاق القائمة" : "فتح القائمة"}
-              className="text-white hover:bg-white/10"
+              className="text-white hover:bg-white/10 transition-all duration-300 flex items-center justify-center"
             >
               {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </Button>
@@ -247,8 +280,8 @@ export function Header() {
 
         {/* Mobile Navigation */}
         {isOpen && (
-          <div className="lg:hidden">
-            <div className={`px-2 pt-4 pb-6 space-y-2 backdrop-blur-md rounded-2xl mt-4 border border-white/10 shadow-2xl transition-all duration-500 ${
+          <div className="md:hidden absolute top-full left-0 right-0 z-50">
+            <div className={`mx-4 px-2 pt-4 pb-6 space-y-2 backdrop-blur-md rounded-2xl mt-4 border border-white/10 shadow-2xl transition-all duration-500 ${
               isScrolled 
                 ? 'bg-slate-900/98' 
                 : 'bg-gradient-to-b from-slate-800/95 to-slate-900/95'
@@ -275,25 +308,25 @@ export function Header() {
               <div className="pt-4 mt-4 border-t border-white/10">
                 <NoSSR>
                   {session ? (
-                                      <div className="space-y-3">
-                    <Link href="/coins" onClick={() => setIsOpen(false)}>
-                      <Button variant="outline" className="w-full flex items-center justify-center space-x-2 rtl:space-x-reverse border-yellow-500/30 text-yellow-400 hover:bg-yellow-500 hover:text-white transition-all duration-300">
-                        <Coins className="h-4 w-4" />
-                        <span>متجر الكوينز</span>
-                      </Button>
-                    </Link>
-                    <Link href="/cart" onClick={() => setIsOpen(false)}>
-                      <Button variant="outline" className="w-full flex items-center justify-center space-x-2 rtl:space-x-reverse border-white/30 text-gray-300 hover:bg-white hover:text-slate-900 transition-all duration-300">
-                        <ShoppingCart className="h-4 w-4" />
-                        <span>السلة ({items.length})</span>
-                      </Button>
-                    </Link>
-                    <Link href="/dashboard" onClick={() => setIsOpen(false)}>
-                      <Button variant="outline" className="w-full border-white/30 text-gray-300 hover:bg-white hover:text-slate-900 transition-all duration-300">
-                        <User className="h-4 w-4 ml-2" />
-                        لوحة التحكم
-                      </Button>
-                    </Link>
+                    <div className="space-y-3">
+                      <Link href="/coins" onClick={() => setIsOpen(false)}>
+                        <Button variant="outline" className="w-full flex items-center justify-center space-x-2 rtl:space-x-reverse border-yellow-500/30 text-yellow-400 hover:bg-yellow-500 hover:text-white transition-all duration-300">
+                          <Coins className="h-4 w-4" />
+                          <span>متجر الكوينز</span>
+                        </Button>
+                      </Link>
+                      <Link href="/cart" onClick={() => setIsOpen(false)}>
+                        <Button variant="outline" className="w-full flex items-center justify-center space-x-2 rtl:space-x-reverse border-white/30 text-gray-300 hover:bg-white hover:text-slate-900 transition-all duration-300">
+                          <ShoppingCart className="h-4 w-4" />
+                          <span>السلة ({items.length})</span>
+                        </Button>
+                      </Link>
+                      <Link href="/dashboard" onClick={() => setIsOpen(false)}>
+                        <Button variant="outline" className="w-full border-white/30 text-gray-300 hover:bg-white hover:text-slate-900 transition-all duration-300">
+                          <User className="h-4 w-4 ml-2" />
+                          لوحة التحكم
+                        </Button>
+                      </Link>
                       <Button 
                         variant="outline" 
                         className="w-full border-red-500/50 text-red-400 hover:bg-red-500 hover:text-white transition-all duration-300"

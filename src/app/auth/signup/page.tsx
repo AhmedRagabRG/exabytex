@@ -378,11 +378,11 @@ export default function SignUpPage() {
                       />
                       <label htmlFor="acceptTerms" className="mr-2 block text-sm text-gray-300">
                         أوافق على{" "}
-                        <Link href="/terms" className="text-blue-400 hover:text-blue-300 transition-colors">
-                          شروط الخدمة
+                        <Link href="/terms-of-service" className="text-blue-400 hover:text-blue-300 transition-colors">
+                          شروط الاستخدام
                         </Link>{" "}
                         و{" "}
-                        <Link href="/privacy" className="text-blue-400 hover:text-blue-300 transition-colors">
+                        <Link href="/privacy-policy" className="text-blue-400 hover:text-blue-300 transition-colors">
                           سياسة الخصوصية
                         </Link>
                       </label>

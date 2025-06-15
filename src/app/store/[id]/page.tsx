@@ -49,9 +49,17 @@ interface Product {
 
 async function getProduct(id: string): Promise<Product | null> {
   try {
-    const baseUrl = process.env.NODE_ENV === 'production' 
-      ? process.env.NEXT_PUBLIC_BASE_URL || 'https://your-domain.com'
-      : 'http://localhost:3000'
+          const getBaseUrl = () => {
+        if (process.env.NEXT_PUBLIC_BASE_URL) {
+          return process.env.NEXT_PUBLIC_BASE_URL
+        }
+        if (process.env.NODE_ENV === 'production') {
+          return 'https://exabytex.com'
+        }
+        return 'http://localhost:3000'
+      }
+      
+      const baseUrl = getBaseUrl()
     
     const response = await fetch(`${baseUrl}/api/products/${id}`, {
       cache: 'no-store'

@@ -25,15 +25,31 @@ export default function ForgotPasswordPage() {
         body: JSON.stringify({ email }),
       })
 
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
       const data = await response.json()
 
-      if (response.ok) {
-        setSuccess('تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني')
+      if (data.success) {
+        setSuccess(data.message || 'تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني')
+        
+        // في بيئة التطوير، عرض الرابط للاختبار
+        if (data.resetUrl) {
+          console.log('🔗 Reset URL for testing:', data.resetUrl)
+          setSuccess(prev => `${prev}
+
+📧 ملاحظة للمطور: 
+تم إنشاء رابط الاستعادة بنجاح. تحقق من Developer Console (F12) للحصول على الرابط المباشر للاختبار.
+
+🔗 رابط الاستعادة: ${data.resetUrl}`)
+        }
       } else {
         setSuccess(data.error || 'حدث خطأ أثناء إرسال البريد الإلكتروني')
       }
     } catch (error) {
-      setSuccess('حدث خطأ في الخادم. حاول مرة أخرى.' + error)
+      console.error('Forgot password error:', error)
+      setSuccess('حدث خطأ في الخادم. حاول مرة أخرى.')
     } finally {
       setIsLoading(false)
     }

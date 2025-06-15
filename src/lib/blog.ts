@@ -55,7 +55,20 @@ export async function getAllPosts(): Promise<BlogPost[]> {
 
 export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
   try {
-    const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/blogs?slug=${slug}`, {
+    const getBaseUrl = () => {
+      if (process.env.NEXT_PUBLIC_BASE_URL) {
+        return process.env.NEXT_PUBLIC_BASE_URL
+      }
+      if (process.env.NEXTAUTH_URL) {
+        return process.env.NEXTAUTH_URL
+      }
+      if (process.env.NODE_ENV === 'production') {
+        return 'https://exabytex.com'
+      }
+      return 'http://localhost:3000'
+    }
+
+    const response = await fetch(`${getBaseUrl()}/api/blogs?slug=${slug}`, {
       cache: 'no-store'
     })
     

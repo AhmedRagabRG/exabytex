@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   User,
+  Users,
   ShoppingBag,
   Heart,
   Settings,
@@ -51,6 +52,7 @@ import { toast } from "sonner";
 import { HomeServicesManager } from "@/components/dashboard/home-services-manager";
 import { CurrencySettings } from "@/components/CurrencySettings";
 import CoinsTab from "@/components/dashboard/CoinsTab";
+import UsersManagement from "@/components/admin/UsersManagement";
 
 interface UserData {
   id: string;
@@ -92,6 +94,7 @@ export default function DashboardPage() {
     | "home-services"
     | "featured-blogs"
     | "currency-settings"
+    | "users-management"
   >("overview");
   const [userData, setUserData] = useState<UserData | null>(null);
   const [, setDashboardData] = useState<DashboardStats | null>(null);
@@ -102,7 +105,7 @@ export default function DashboardPage() {
     const urlParams = new URLSearchParams(window.location.search);
     const tabParam = urlParams.get('tab');
     if (tabParam) {
-      const validTabs = ["overview", "orders", "saved", "coins", "profile", "products", "categories", "promo-codes", "blog-management", "home-services", "featured-blogs", "currency-settings"];
+      const validTabs = ["overview", "orders", "saved", "coins", "profile", "products", "categories", "promo-codes", "blog-management", "home-services", "featured-blogs", "currency-settings", "users-management"];
       if (validTabs.includes(tabParam)) {
         setActiveTab(tabParam as any);
       }
@@ -124,12 +127,13 @@ export default function DashboardPage() {
       | "home-services"
       | "featured-blogs"
       | "currency-settings"
+      | "users-management"
   ) => {
     setActiveTab(tab);
   };
 
   const handleGoToProducts = () => {
-    router.push("/products");
+    router.push("/store");
   };
 
   const handleProfileUpdate = (updatedUser: UserData) => {
@@ -380,6 +384,18 @@ export default function DashboardPage() {
                   <CreditCard className="h-4 w-4 inline ml-2" />
                   إعدادات العملة
                 </button>
+
+                <button
+                  onClick={() => handleTabChange("users-management")}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+                    activeTab === "users-management"
+                      ? "border-blue-500 text-blue-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                >
+                  <Users className="h-4 w-4 inline ml-2" />
+                  إدارة المستخدمين
+                </button>
               </>
             )}
           </nav>
@@ -421,6 +437,7 @@ export default function DashboardPage() {
             <CurrencySettings />
           </div>
         )}
+        {(isManager || isAdmin) && activeTab === "users-management" && <UsersManagement />}
       </div>
     </div>
   );

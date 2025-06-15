@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -23,6 +23,19 @@ import {
   Rocket
 } from 'lucide-react'
 
+interface HomeService {
+  id: string
+  title: string
+  subtitle: string
+  description: string
+  features: string[]
+  icon: string
+  gradient: string
+  bgGradient: string
+  isActive: boolean
+  sortOrder: number
+}
+
 export default function ContactPage() {
   const [formData, setFormData] = useState({
     name: '',
@@ -33,6 +46,75 @@ export default function ContactPage() {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [services, setServices] = useState<HomeService[]>([])
+  const [servicesLoading, setServicesLoading] = useState(true)
+
+  // Fetch services from database
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const response = await fetch('/api/services')
+        
+        if (response.ok) {
+          const data = await response.json()
+          
+          const parsedServices = data
+            .map((service: any) => ({
+              ...service,
+              features: JSON.parse(service.features)
+            }))
+            .sort((a: any, b: any) => a.sortOrder - b.sortOrder)
+          
+          setServices(parsedServices)
+        }
+      } catch (error) {
+        console.error('Error fetching services:', error)
+        // Fallback to default services if API fails
+        setServices([
+          {
+            id: 'default-automation',
+            title: 'الأتمتة والتكامل',
+            subtitle: 'ربط وأتمتة جميع أنظمة العمل',
+            description: 'نقوم بأتمتة العمليات التجارية',
+            features: ['أتمتة المهام المتكررة'],
+            icon: 'Zap',
+            gradient: 'from-cyan-500 to-blue-600',
+            bgGradient: 'from-cyan-500/20 to-blue-600/20',
+            isActive: true,
+            sortOrder: 0
+          },
+          {
+            id: 'default-chatbot',
+            title: 'روبوتات المحادثة',
+            subtitle: 'خدمة عملاء ذكية 24/7',
+            description: 'روبوتات محادثة متطورة',
+            features: ['ذكاء اصطناعي متقدم'],
+            icon: 'Bot',
+            gradient: 'from-purple-500 to-pink-600',
+            bgGradient: 'from-purple-500/20 to-pink-600/20',
+            isActive: true,
+            sortOrder: 1
+          },
+          {
+            id: 'default-marketing',
+            title: 'التسويق الرقمي',
+            subtitle: 'حملات مدعومة بالذكاء الاصطناعي',
+            description: 'استراتيجيات تسويق متقدمة',
+            features: ['تحليل البيانات'],
+            icon: 'BarChart3',
+            gradient: 'from-green-500 to-emerald-600',
+            bgGradient: 'from-green-500/20 to-emerald-600/20',
+            isActive: true,
+            sortOrder: 2
+          }
+        ])
+      } finally {
+        setServicesLoading(false)
+      }
+    }
+
+    fetchServices()
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -87,27 +169,6 @@ export default function ContactPage() {
       gradient: "from-purple-500 to-pink-500",
       bgGradient: "from-purple-50 to-pink-50"
     },
-  ]
-
-  const services = [
-    {
-      icon: Zap,
-      title: "الأتمتة والتكامل",
-      description: "حلول شاملة لأتمتة أعمالك",
-      gradient: "from-blue-500 to-cyan-500"
-    },
-    {
-      icon: Bot,
-      title: "روبوتات المحادثة",
-      description: "ذكاء اصطناعي متقدم لخدمة العملاء",
-      gradient: "from-purple-500 to-pink-500"
-    },
-    {
-      icon: BarChart3,
-      title: "التسويق الرقمي",
-      description: "حملات مدعومة بالذكاء الاصطناعي",
-      gradient: "from-green-500 to-emerald-500"
-    }
   ]
 
   if (isSubmitted) {
@@ -235,11 +296,16 @@ export default function ContactPage() {
                         value={formData.service}
                         onChange={handleChange}
                         className="w-full bg-white/10 border border-white/20 text-white rounded-md px-3 py-2 focus:border-blue-400 focus:outline-none"
+                        disabled={servicesLoading}
                       >
-                        <option value="" className="text-gray-900">اختر الخدمة</option>
-                        <option value="automation" className="text-gray-900">الأتمتة والتكامل</option>
-                        <option value="chatbot" className="text-gray-900">روبوتات المحادثة</option>
-                        <option value="marketing" className="text-gray-900">التسويق الرقمي</option>
+                        <option value="" className="text-gray-900">
+                          {servicesLoading ? 'جاري تحميل الخدمات...' : 'اختر الخدمة'}
+                        </option>
+                        {services.map((service) => (
+                          <option key={service.id} value={service.title} className="text-gray-900">
+                            {service.title}
+                          </option>
+                        ))}
                         <option value="consultation" className="text-gray-900">استشارة عامة</option>
                       </select>
                     </div>
@@ -312,49 +378,46 @@ export default function ContactPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
+                  {servicesLoading ? (
+                    <div className="space-y-4">
+                      {[...Array(3)].map((_, index) => (
+                        <div key={index} className="flex items-center gap-4 p-3 rounded-lg bg-white/5">
+                          <div className="w-10 h-10 rounded-lg bg-gray-300 animate-pulse"></div>
+                          <div className="flex-1">
+                            <div className="h-4 bg-gray-300 rounded animate-pulse mb-2"></div>
+                            <div className="h-3 bg-gray-300 rounded animate-pulse w-2/3"></div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
                   <div className="space-y-4">
                     {services.map((service, index) => (
                       <div key={index} className="flex items-center gap-4 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors cursor-pointer group">
                         <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${service.gradient} flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
-                          <service.icon className="h-5 w-5 text-white" />
+                            <div className="w-5 h-5 text-white">
+                              {service.icon === 'Zap' && <Zap className="w-5 h-5" />}
+                              {service.icon === 'MessageSquare' && <MessageSquare className="w-5 h-5" />}
+                              {service.icon === 'BarChart3' && <BarChart3 className="w-5 h-5" />}
+                              {service.icon === 'Bot' && <Bot className="w-5 h-5" />}
+                              {service.icon === 'Rocket' && <Rocket className="w-5 h-5" />}
+                              {service.icon === 'Brain' && <Brain className="w-5 h-5" />}
+                              {/* Default icon if not found */}
+                              {!['Zap', 'MessageSquare', 'BarChart3', 'Bot', 'Rocket', 'Brain'].includes(service.icon) && <Sparkles className="w-5 h-5" />}
+                            </div>
                         </div>
                         <div className="flex-1">
                           <h4 className="font-semibold text-white">{service.title}</h4>
-                          <p className="text-gray-400 text-sm">{service.description}</p>
+                            <p className="text-gray-400 text-sm">{service.subtitle}</p>
                         </div>
                         <ArrowLeft className="h-4 w-4 text-gray-400 group-hover:text-white transition-colors" />
                       </div>
                     ))}
                   </div>
+                  )}
                 </CardContent>
               </div>
             </Card>
-
-            {/* Trust Indicators */}
-            {/* <Card className="relative overflow-hidden border-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20 backdrop-blur-md">
-              <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent"></div>
-              <CardContent className="relative z-10 p-6">
-                <div className="text-center mb-4">
-                  <h3 className="text-xl font-bold text-white mb-2">لماذا تختارنا؟</h3>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  {[
-                    { icon: Users, number: "500+", label: "عميل سعيد" },
-                    { icon: Award, number: "95%", label: "معدل النجاح" },
-                    { icon: Shield, number: "24/7", label: "دعم فني" },
-                    { icon: TrendingUp, number: "300%", label: "تحسين الأداء" }
-                  ].map((stat, index) => (
-                    <div key={index} className="text-center">
-                      <div className="w-8 h-8 mx-auto mb-2 rounded-lg bg-gradient-to-r from-blue-400 to-purple-400 flex items-center justify-center">
-                        <stat.icon className="h-4 w-4 text-white" />
-                      </div>
-                      <div className="text-lg font-bold text-white">{stat.number}</div>
-                      <div className="text-gray-300 text-xs">{stat.label}</div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card> */}
           </div>
         </div>
 

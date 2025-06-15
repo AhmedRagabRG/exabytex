@@ -9,6 +9,20 @@ const KASHIER_CONFIG = {
   isTestMode: process.env.KASHIER_TEST_MODE === 'true' || process.env.NODE_ENV !== 'production'
 };
 
+// التحقق من صحة URL
+function isValidUrl(url: string): boolean {
+  try {
+    const urlObj = new URL(url);
+    // التأكد من أن الـ protocol صحيح والـ hostname موجود
+    return (urlObj.protocol === 'http:' || urlObj.protocol === 'https:') && 
+           urlObj.hostname.length > 0 && 
+           !urlObj.hostname.includes('localhost') &&
+           !urlObj.hostname.includes('127.0.0.1');
+  } catch {
+    return false;
+  }
+}
+
 // إنشاء URLs صحيحة لكاشير
 function getBaseUrl(): string {
   // إذا كان هناك BASE_URL محدد، استخدمه
@@ -18,11 +32,11 @@ function getBaseUrl(): string {
   
   // للاختبار، استخدم URLs وهمية صحيحة
   if (KASHIER_CONFIG.isTestMode) {
-    return 'https://example.com';
+    return 'https://test-payments.example.com';
   }
   
   // للإنتاج، يجب أن يكون domain حقيقي
-  return process.env.NEXT_PUBLIC_BASE_URL || 'https://yoursite.com';
+  return process.env.NEXT_PUBLIC_BASE_URL || 'https://exabytex.com';
 }
 
 interface OrderData {
@@ -130,10 +144,10 @@ export async function POST(request: NextRequest) {
       currency: 'EGP',
       orderId: orderId,
       hash: '',
-      success: `${baseUrl}/payment/success?orderId=${orderId}`,
-      failure: `${baseUrl}/payment/failure?orderId=${orderId}`,
-      back: `${baseUrl}/checkout`,
-      webhookUrl: `${baseUrl}/api/kashier/webhook`,
+      success: encodeURI(`${baseUrl}/payment/success?orderId=${orderId}`),
+      failure: encodeURI(`${baseUrl}/payment/failure?orderId=${orderId}`),
+      back: encodeURI(`${baseUrl}/checkout`),
+      webhookUrl: encodeURI(`${baseUrl}/api/kashier/webhook`),
       method: 'CARD',
       reference: orderId,
       description: sanitizeString(`منتجات رقمية - طلب رقم ${orderId}`),
@@ -184,6 +198,39 @@ export async function POST(request: NextRequest) {
       urlParams.append(key, value.toString());
     }
 
+    // التحقق من صحة URLs قبل الإرسال
+    const urlValidation = {
+      success: isValidUrl(paymentData.success),
+      failure: isValidUrl(paymentData.failure),
+      back: isValidUrl(paymentData.back),
+      webhook: isValidUrl(paymentData.webhookUrl)
+    };
+
+    if (!urlValidation.success || !urlValidation.failure || !urlValidation.back) {
+      console.error('Invalid URLs detected:', {
+        success: paymentData.success,
+        failure: paymentData.failure,
+        back: paymentData.back,
+        validation: urlValidation
+      });
+      
+      return NextResponse.json({
+        success: false,
+        error: 'خطأ في إعداد URLs للدفع. يرجى التأكد من إعداد NEXT_PUBLIC_BASE_URL بشكل صحيح',
+        paymentUrl: '#',
+        orderId: orderId,
+        debug: {
+          baseUrl,
+          urls: {
+            success: paymentData.success,
+            failure: paymentData.failure,
+            back: paymentData.back
+          },
+          validation: urlValidation
+        }
+      }, { status: 500 });
+    }
+
     // استخدام URL الصحيح لكاشير
     const kashierPaymentUrl = `https://checkout.kashier.io/?${urlParams.toString()}`;
 
@@ -197,6 +244,7 @@ export async function POST(request: NextRequest) {
     console.log('Customer Phone:', cleanCustomer.phone);
     console.log('Mode:', paymentData.mode);
     console.log('URL Length:', kashierPaymentUrl.length);
+    console.log('URL Validation:', urlValidation);
     console.log('==============================');
 
     return NextResponse.json({

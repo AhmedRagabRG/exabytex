@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { EXCHANGE_RATES, getLiveExchangeRates, updateExchangeRates } from '@/lib/currency';
-import { getServerSession } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
 // GET - الحصول على أسعار الصرف الحالية
 export async function GET() {
@@ -35,10 +36,22 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions);
     
     // التحقق من صلاحيات المشرف
-    if (!session?.user?.email || !['admin@test.com'].includes(session.user.email)) {
+    if (!session?.user?.email) {
       return NextResponse.json({
         success: false,
-        error: 'غير مخول - مطلوب صلاحيات مشرف'
+        error: 'غير مخول للوصول'
+      }, { status: 401 });
+    }
+
+    // التحقق من أن المستخدم admin أو manager
+    const currentUser = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    })
+
+    if (!currentUser || (currentUser.role !== 'ADMIN' && currentUser.role !== 'MANAGER')) {
+      return NextResponse.json({
+        success: false,
+        error: 'ليس لديك صلاحية لتحديث أسعار الصرف'
       }, { status: 403 });
     }
 
@@ -79,10 +92,22 @@ export async function PUT(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session?.user?.email || !['admin@test.com'].includes(session.user.email)) {
+    if (!session?.user?.email) {
       return NextResponse.json({
         success: false,
-        error: 'غير مخول - مطلوب صلاحيات مشرف'
+        error: 'غير مخول للوصول'
+      }, { status: 401 });
+    }
+
+    // التحقق من أن المستخدم admin أو manager
+    const currentUser = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    })
+
+    if (!currentUser || (currentUser.role !== 'ADMIN' && currentUser.role !== 'MANAGER')) {
+      return NextResponse.json({
+        success: false,
+        error: 'ليس لديك صلاحية لتحديث أسعار الصرف'
       }, { status: 403 });
     }
 

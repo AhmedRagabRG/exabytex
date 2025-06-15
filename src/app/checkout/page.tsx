@@ -12,6 +12,8 @@ import { CurrencyConverter } from '@/components/ui/CurrencyConverter'
 import { CountrySelector, COUNTRIES, type Country } from '@/components/ui/CountrySelector'
 import { CurrencyConversionModal } from '@/components/ui/CurrencyConversionModal'
 import { EgpPaymentModal } from '@/components/ui/EgpPaymentModal'
+import { PayPalButton } from '@/components/ui/PayPalButton'
+import { ApplePayButton } from '@/components/ui/ApplePayButton'
 
 interface CheckoutFormData {
   firstName: string;
@@ -19,7 +21,7 @@ interface CheckoutFormData {
   email: string;
   phone: string;
   phoneCountry: Country;
-  paymentMethod: 'card';
+  paymentMethod: 'card' | 'paypal' | 'apple_pay';
 }
 
 export default function CheckoutPage() {
@@ -38,6 +40,7 @@ export default function CheckoutPage() {
   } | null>(null);
   const [showConversionModal, setShowConversionModal] = useState(false);
   const [showEgpModal, setShowEgpModal] = useState(false);
+  const [isFormValid, setIsFormValid] = useState(false);
 
   
   const [formData, setFormData] = useState<CheckoutFormData>({
@@ -123,6 +126,10 @@ export default function CheckoutPage() {
     }
   };
 
+  const handlePaymentMethodChange = (method: CheckoutFormData['paymentMethod']) => {
+    setFormData(prev => ({ ...prev, paymentMethod: method }));
+  };
+
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -136,6 +143,18 @@ export default function CheckoutPage() {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
+
+  // Update form validation when form data changes
+  useEffect(() => {
+    const isValid = formData.firstName.trim() !== '' &&
+                   formData.lastName.trim() !== '' &&
+                   formData.email.trim() !== '' &&
+                   /\S+@\S+\.\S+/.test(formData.email) &&
+                   formData.phone.trim() !== '' &&
+                   /^[0-9]{7,15}$/.test(formData.phone.replace(/\s/g, ''));
+                   
+    setIsFormValid(isValid);
+  }, [formData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -170,31 +189,38 @@ export default function CheckoutPage() {
 
       console.log('Sending order data:', orderData);
 
-      const paymentResponse = await fetch('/api/kashier/create-payment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData)
-      });
+      // Handle different payment methods
+      if (formData.paymentMethod === 'card') {
+        // Kashier Legacy Payment UI
+        const paymentResponse = await fetch('/api/kashier/create-hosted-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderData)
+        });
 
-      const result = await paymentResponse.json();
-      console.log('Kashier Response:', result);
-
-      if (result.success && result.paymentUrl && result.paymentUrl !== '#') {
-        // حفظ معلومات التحويل إذا كانت موجودة
-        if (result.currencyConversion && result.currencyConversion.originalCurrency !== 'EGP') {
-          setCurrencyConversion(result.currencyConversion);
-          // تأخير التحويل لثانيتين لعرض معلومات التحويل
-          setTimeout(() => {
+        const result = await paymentResponse.json();
+        console.log('Kashier Legacy UI Response:', result);
+        
+        if (result.success && result.paymentUrl && result.paymentUrl !== '#') {
+          // حفظ معلومات التحويل إذا كانت موجودة
+          if (result.currencyConversion && result.currencyConversion.originalCurrency !== 'EGP') {
+            setCurrencyConversion(result.currencyConversion);
+            // عرض معلومات التحويل قبل التوجه للدفع
+            setTimeout(() => {
+              localStorage.setItem('pendingOrderId', result.orderId);
+              window.location.href = result.paymentUrl;
+            }, 3000);
+          } else {
             localStorage.setItem('pendingOrderId', result.orderId);
             window.location.href = result.paymentUrl;
-          }, 3000);
+          }
         } else {
-          localStorage.setItem('pendingOrderId', result.orderId);
-          window.location.href = result.paymentUrl;
+          alert(`خطأ في إنشاء صفحة الدفع: ${result.error || 'حدث خطأ غير معروف'}`);
+          console.error('Kashier Legacy UI Error:', result);
         }
       } else {
-        alert('إعدادات كاشير غير مكتملة. تأكد من إضافة بيانات كاشير في متغيرات البيئة.');
-        console.error('Kashier settings incomplete:', result);
+        // For PayPal and Apple Pay, we'll handle them in the payment buttons
+        alert('يرجى استخدام زر الدفع المناسب أسفل النموذج');
       }
     } catch (error) {
       console.error('خطأ في إرسال الطلب:', error);
@@ -202,6 +228,35 @@ export default function CheckoutPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Handle PayPal payment success
+  const handlePayPalSuccess = (details: unknown) => {
+    console.log('PayPal payment successful:', details);
+    const paymentDetails = details as { id: string };
+    localStorage.setItem('pendingOrderId', paymentDetails.id);
+    window.location.href = `/payment/success?orderId=${paymentDetails.id}&method=paypal`;
+  };
+
+  // Handle PayPal payment error
+  const handlePayPalError = (error: unknown) => {
+    console.error('PayPal payment error:', error);
+    alert('حدث خطأ في دفع PayPal. يرجى المحاولة مرة أخرى.');
+  };
+
+  // Handle Apple Pay success
+  const handleApplePaySuccess = (details: unknown) => {
+    console.log('Apple Pay payment successful:', details);
+    const paymentDetails = details as { orderId: string };
+    localStorage.setItem('pendingOrderId', paymentDetails.orderId);
+    window.location.href = `/payment/success?orderId=${paymentDetails.orderId}&method=apple_pay`;
+  };
+
+  // Handle Apple Pay error
+  const handleApplePayError = (error: unknown) => {
+    console.error('Apple Pay payment error:', error);
+    const errorObj = error as { message?: string };
+    alert(`حدث خطأ في دفع Apple Pay: ${errorObj.message || 'خطأ غير معروف'}`);
   };
 
   if (status === 'loading' || cartLoading) {
@@ -359,21 +414,97 @@ export default function CheckoutPage() {
                   <CreditCard className="h-5 w-5 ml-2" />
                   طريقة الدفع
                 </h3>
-                <div className="p-4 border-2 border-blue-500 bg-blue-50 rounded-lg">
-                  <div className="flex items-center">
-                    <CreditCard className="h-5 w-5 text-blue-600 ml-2" />
-                    <span className="font-medium">دفع فوري بالبطاقة</span>
+                
+                <div className="space-y-3">
+                  {/* Kashier Card Payment */}
+                  <div 
+                    className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                      formData.paymentMethod === 'card' 
+                        ? 'border-blue-500 bg-blue-50' 
+                        : 'border-gray-200 bg-white hover:border-blue-300'
+                    }`}
+                    onClick={() => handlePaymentMethodChange('card')}
+                  >
+                    <div className="flex items-center">
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="card"
+                        checked={formData.paymentMethod === 'card'}
+                        onChange={handleInputChange}
+                        className="ml-3 text-blue-600"
+                      />
+                      <CreditCard className="h-5 w-5 text-blue-600 ml-2" />
+                      <span className="font-medium">البطاقة الائتمانية (واجهة كاشير التقليدية)</span>
+                    </div>
+                    <p className="text-sm text-blue-700 mt-1 mr-10">
+                      Visa, Mastercard - واجهة دفع تقليدية مألوفة ومجربة
+                    </p>
                   </div>
-                  <p className="text-sm text-blue-700 mt-1">
-                    Visa, Mastercard
-                  </p>
-                  <p className="text-xs text-gray-600 mt-2">
-                    المنتجات الرقمية تتطلب الدفع الفوري
-                  </p>
+
+                  {/* PayPal Payment */}
+                  <div 
+                    className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                      formData.paymentMethod === 'paypal' 
+                        ? 'border-blue-500 bg-blue-50' 
+                        : 'border-gray-200 bg-white hover:border-blue-300'
+                    }`}
+                    onClick={() => handlePaymentMethodChange('paypal')}
+                  >
+                    <div className="flex items-center">
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="paypal"
+                        checked={formData.paymentMethod === 'paypal'}
+                        onChange={handleInputChange}
+                        className="ml-3 text-blue-600"
+                      />
+                      <svg className="h-5 w-5 ml-2" viewBox="0 0 24 24" fill="#003087">
+                        <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106zm14.146-14.42a3.35 3.35 0 0 0-.098-.24c-.543-1.24-1.51-2.053-2.8-2.35a8.006 8.006 0 0 0-1.92-.22H9.232c-.524 0-.967.38-1.05.9L7.076 8.96c-.083.52.263.96.787.96h2.19c4.298 0 7.664-1.747 8.647-6.797.03-.15.053-.294.077-.437z"/>
+                      </svg>
+                      <span className="font-medium">PayPal</span>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1 mr-10">
+                      ادفع بأمان عبر PayPal
+                    </p>
+                  </div>
+
+                  {/* Apple Pay Payment */}
+                  <div 
+                    className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                      formData.paymentMethod === 'apple_pay' 
+                        ? 'border-black bg-gray-50' 
+                        : 'border-gray-200 bg-white hover:border-gray-400'
+                    }`}
+                    onClick={() => handlePaymentMethodChange('apple_pay')}
+                  >
+                    <div className="flex items-center">
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="apple_pay"
+                        checked={formData.paymentMethod === 'apple_pay'}
+                        onChange={handleInputChange}
+                        className="ml-3 text-gray-600"
+                      />
+                      <svg className="h-5 w-5 ml-2" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M18.71 19.5C17.16 20.38 15.58 20.8 14.28 20.8C12.98 20.8 11.4 20.38 9.85 19.5C8.3 18.62 6.75 17.74 5.2 17.74C3.65 17.74 2.1 18.62 0.55 19.5V17.74C2.1 16.86 3.65 16.44 5.2 16.44C6.75 16.44 8.3 16.86 9.85 17.74C11.4 18.62 12.98 19.04 14.28 19.04C15.58 19.04 17.16 18.62 18.71 17.74V19.5Z"/>
+                      </svg>
+                      <span className="font-medium">Apple Pay (كاشير)</span>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1 mr-10">
+                      دفع سريع وآمن عبر Apple Pay
+                    </p>
+                  </div>
                 </div>
+
+                <p className="text-xs text-gray-600 mt-3">
+                  المنتجات الرقمية تتطلب الدفع الفوري
+                </p>
               </div>
 
-              <div className="bg-blue-50 p-4 rounded-lg">
+              {/* <div className="bg-blue-50 p-4 rounded-lg">
                 <h4 className="text-sm font-medium text-blue-900 mb-2">ملاحظات مهمة:</h4>
                 <ul className="text-xs text-blue-800 space-y-1">
                   <li>• ستحصل على المنتجات فوراً بعد إتمام الدفع</li>
@@ -381,26 +512,83 @@ export default function CheckoutPage() {
                   <li>• خدمة دعم فني 24/7 لمساعدتك</li>
                   <li>• ضمان استرداد لمدة 30 يوم</li>
                 </ul>
-              </div>
+              </div> */}
 
 
 
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {isLoading ? (
-                  <div className="flex items-center justify-center">
-                    <Loader2 className="animate-spin h-5 w-5 ml-2" />
-                    {currencyConversion ? 'جاري التحويل لكاشير...' : 'جاري الاتصال بكاشير...'}
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center">
-                    إتمام الدفع - <SimplePrice amount={totalAmount} className="text-white" />
-                  </div>
-                )}
-              </button>
+              {/* Payment Buttons Based on Selected Method */}
+              {formData.paymentMethod === 'card' && (
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isLoading ? (
+                    <div className="flex items-center justify-center">
+                      <Loader2 className="animate-spin h-5 w-5 ml-2" />
+                      {currencyConversion ? 'جاري التحويل لكاشير...' : 'جاري الاتصال بكاشير...'}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center">
+                      إتمام الدفع بالبطاقة - <SimplePrice amount={totalAmount} className="text-white" />
+                    </div>
+                  )}
+                </button>
+              )}
+
+              {formData.paymentMethod === 'paypal' && isFormValid && (
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-600 text-center">
+                    اضغط على زر PayPal للمتابعة
+                  </p>
+                  <PayPalButton
+                    amount={totalAmount}
+                    currency="USD"
+                    onSuccess={handlePayPalSuccess}
+                    onError={handlePayPalError}
+                    disabled={isLoading || !isFormValid}
+                  />
+                </div>
+              )}
+
+              {formData.paymentMethod === 'apple_pay' && isFormValid && (
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-600 text-center">
+                    اضغط على زر Apple Pay للمتابعة
+                  </p>
+                  <ApplePayButton
+                    amount={totalAmount}
+                    currency="EGP"
+                    onSuccess={handleApplePaySuccess}
+                    onError={handleApplePayError}
+                    orderData={{
+                      items: items.map(item => ({
+                        id: item.id,
+                        name: item.name,
+                        price: item.price,
+                        quantity: item.quantity
+                      })),
+                      customer: {
+                        ...formData,
+                        phone: `${formData.phoneCountry.phoneCode}${formData.phone}`,
+                        country: formData.phoneCountry.nameAr,
+                        countryCode: formData.phoneCountry.code
+                      },
+                      totals: {
+                        subtotal,
+                        total: totalAmount
+                      }
+                    }}
+                    disabled={isLoading || !isFormValid}
+                  />
+                </div>
+              )}
+
+              {!isFormValid && formData.paymentMethod !== 'card' && (
+                <div className="w-full bg-gray-300 text-gray-500 py-3 px-4 rounded-lg font-semibold text-center">
+                  يرجى ملء جميع البيانات المطلوبة
+                </div>
+              )}
             </form>
           </div>
 
@@ -473,7 +661,7 @@ export default function CheckoutPage() {
               </div>
             )}
 
-            <div className="mt-6 p-4 bg-green-50 rounded-lg">
+            {/* <div className="mt-6 p-4 bg-green-50 rounded-lg">
               <h4 className="text-sm font-medium text-green-900 mb-2">مميزات المنتجات الرقمية:</h4>
               <ul className="text-xs text-green-800 space-y-1">
                 <li>• تحميل فوري بعد الدفع</li>
@@ -481,7 +669,7 @@ export default function CheckoutPage() {
                 <li>• تحديثات مجانية</li>
                 <li>• ضمان الجودة 100%</li>
               </ul>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>

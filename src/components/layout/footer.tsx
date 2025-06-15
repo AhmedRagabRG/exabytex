@@ -34,6 +34,8 @@ export function Footer() {
     { name: "التسويق الرقمي", icon: BarChart3, gradient: "from-green-500 to-emerald-500" },
   ]
 
+
+
   const socialLinks = [
     { name: "Facebook", icon: Facebook, href: "https://www.facebook.com/exabytex", gradient: "from-blue-600 to-blue-500" },
     { name: "Instagram", icon: Instagram, href: "https://www.instagram.com/exabytex.ai/", gradient: "from-pink-500 to-purple-500" },
@@ -133,7 +135,7 @@ export function Footer() {
                   <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                     <MapPin className="h-5 w-5 text-white" />
                   </div>
-                  <span className="text-gray-300 group-hover:text-white transition-colors">القاهرة، الشيخ زايد</span>
+                  <span className="text-gray-300 group-hover:text-white transition-colors">الجيزة، الشيخ زايد</span>
                 </div>
               </div>
 
@@ -224,9 +226,9 @@ export function Footer() {
               </div>
 
               <div className="flex items-center gap-6 text-sm text-gray-400">
-                <Link href="#" className="hover:text-white transition-colors">سياسة الخصوصية</Link>
-                <Link href="#" className="hover:text-white transition-colors">سياسة الاسترداد</Link>
-                <Link href="#" className="hover:text-white transition-colors">شروط الاستخدام</Link>
+                <Link href="/privacy-policy" className="hover:text-white transition-colors">سياسة الخصوصية</Link>
+                <Link href="/refund-policy" className="hover:text-white transition-colors">سياسة الاسترداد</Link>
+                <Link href="/terms-of-service" className="hover:text-white transition-colors">شروط الاستخدام</Link>
               </div>
             </div>
           </div>

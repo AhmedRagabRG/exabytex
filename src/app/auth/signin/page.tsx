@@ -297,11 +297,11 @@ export default function SignInPage() {
         <div className="text-center">
           <p className="text-gray-400 text-sm">
             بتسجيل الدخول، أنت توافق على{" "}
-            <Link href="/terms" className="text-blue-400 hover:text-blue-300 transition-colors">
+            <Link href="/terms-of-service" className="text-blue-400 hover:text-blue-300 transition-colors">
               شروط الاستخدام
             </Link>{" "}
             و{" "}
-            <Link href="/privacy" className="text-blue-400 hover:text-blue-300 transition-colors">
+            <Link href="/privacy-policy" className="text-blue-400 hover:text-blue-300 transition-colors">
               سياسة الخصوصية
             </Link>
           </p>
