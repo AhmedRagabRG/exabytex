@@ -17,11 +17,34 @@ export const metadata: Metadata = {
   description: "نقدم حلول الأتمتة والتكامل، روبوتات المحادثة الذكية، والتسويق الرقمي المتقدم لتحويل أعمالك نحو المستقبل",
   keywords: "أتمتة، تكامل الأنظمة، روبوتات محادثة، تسويق رقمي، ذكاء اصطناعي",
   authors: [{ name: "Exa Bytex" }],
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any', type: 'image/x-icon' },
+      { url: '/favicon.svg', sizes: 'any', type: 'image/svg+xml' },
+    ],
+    shortcut: '/favicon.ico',
+    apple: '/favicon.ico',
+  },
+  manifest: '/site.webmanifest',
   openGraph: {
     title: "Exa Bytex - الأتمتة والتكامل، روبوتات المحادثة، والتسويق الرقمي",
     description: "حلول الأتمتة والتكامل، روبوتات المحادثة الذكية، والتسويق الرقمي المتقدم",
     type: "website",
     locale: "ar_SA",
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'Exa Bytex - حلول الأتمتة والتسويق الرقمي',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: "Exa Bytex - الأتمتة والتكامل، روبوتات المحادثة، والتسويق الرقمي",
+    description: "حلول الأتمتة والتكامل، روبوتات المحادثة الذكية، والتسويق الرقمي المتقدم",
+    images: ['/og-image.png'],
   },
 };
 
