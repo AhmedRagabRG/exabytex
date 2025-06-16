@@ -3,229 +3,238 @@ import { getServerSession } from "next-auth/next"
 import { authOptions } from '@/lib/auth';
 import { PrismaClient, Prisma } from '@prisma/client';
 import { Session } from 'next-auth';
+import { prisma } from "@/lib/prisma"
 
-const prisma = new PrismaClient();
+const prismaClient = new PrismaClient();
 
-// GET - جلب جميع المقالات المنشورة أو مقال واحد بواسطة slug
-export async function GET(request: NextRequest) {
+// GET - جلب جميع المقالات
+export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const slug = searchParams.get('slug');
+    const { searchParams } = new URL(request.url)
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '10')
+    const status = searchParams.get('status') || 'PUBLISHED'
+    const featured = searchParams.get('featured')
     
-    // إذا كان هناك slug، جلب مقال واحد
-    if (slug) {
-      const post = await prisma.blogPost.findFirst({
-        where: { 
-          slug: slug,
-          published: true,
-          status: 'PUBLISHED'
-        },
-        include: {
-          author: {
-            select: {
-              name: true,
-              image: true
-            }
-          }
-        }
-      });
+    const skip = (page - 1) * limit
 
-      if (!post) {
-        return NextResponse.json(
-          { success: false, message: 'المقال غير موجود' },
-          { status: 404 }
-        );
-      }
-      
-      // ملاحظة: لا نفحص isVisible هنا للسماح بالوصول المباشر للمقالات المخفية
-
-      // تحويل المقال للصيغة المطلوبة
-      const formattedPost = {
-        ...post,
-        tags: JSON.parse(post.tags || '[]'),
-        publishedAt: post.publishedAt?.toISOString() || null,
-        createdAt: post.createdAt.toISOString(),
-        updatedAt: post.updatedAt.toISOString(),
-      };
-
-      return NextResponse.json({
-        success: true,
-        post: formattedPost
-      });
+    const where: any = {}
+    
+    if (status !== 'ALL') {
+      where.status = status
     }
     
-    // جلب جميع المقالات
-    const status = searchParams.get('status') || 'PUBLISHED';
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
-    const isAdmin = searchParams.get('admin') === 'true'; // للإدارة
-    const skip = (page - 1) * limit;
+    if (featured === 'true') {
+      where.featured = true
+    }
 
-    // شروط البحث
-    const where: Prisma.BlogPostWhereInput = {};
-    
     if (status === 'PUBLISHED') {
-      where.status = 'PUBLISHED';
-      where.published = true;
-      // إذا لم يكن مدير، فقط المقالات المرئية
-      if (!isAdmin) {
-        (where as any).isVisible = true;
-      }
-    } else if (status === 'ALL') {
-      // لا توجد شروط إضافية - عرض الكل
-    } else {
-      where.status = status as any;
+      where.published = true
+      where.isVisible = true
     }
 
     const [blogs, total] = await Promise.all([
       prisma.blogPost.findMany({
         where,
-        include: {
+        select: {
+          id: true,
+          title: true,
+          content: true,
+          excerpt: true,
+          slug: true,
+          coverImage: true,
+          authorId: true,
+          authorName: true,
+          authorAvatar: true,
+          tags: true,
+          featured: true,
+          status: true,
+          published: true,
+          publishedAt: true,
+          createdAt: true,
+          updatedAt: true,
           author: {
             select: {
               id: true,
               name: true,
               email: true,
-              image: true,
-              role: true
+              image: true
             }
           },
-          approvedBy: {
+          comments: {
+            where: {
+              isApproved: true,
+              parentId: null
+            },
             select: {
               id: true,
-              name: true,
-              email: true,
-              role: true
-            }
+              content: true,
+              authorName: true,
+              createdAt: true
+            },
+            take: 3
           }
         },
-        orderBy: {
-          createdAt: 'desc'
-        },
+        orderBy: [
+          { featured: 'desc' },
+          { publishedAt: 'desc' },
+          { createdAt: 'desc' }
+        ],
         skip,
         take: limit
       }),
       prisma.blogPost.count({ where })
-    ]);
-
-    // تحويل tags من string إلى array
-    const formattedBlogs = blogs.map(blog => ({
-      ...blog,
-      tags: JSON.parse(blog.tags || '[]')
-    }));
+    ])
 
     return NextResponse.json({
-      blogs: formattedBlogs,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit)
+      success: true,
+      data: {
+        blogs,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit)
+        }
       }
-    });
+    })
 
   } catch (error) {
-    console.error('Error fetching blogs:', error);
+    console.error("Error fetching blogs:", error)
     return NextResponse.json(
-      { error: 'فشل في جلب المقالات' },
+      { 
+        success: false,
+        error: "حدث خطأ في جلب المقالات" 
+      },
       { status: 500 }
-    );
+    )
   }
 }
 
 // POST - إنشاء مقال جديد
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions) as Session;
+    const body = await request.json()
     
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: 'يجب تسجيل الدخول أولاً' },
-        { status: 401 }
-      );
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'المستخدم غير موجود' },
-        { status: 404 }
-      );
-    }
-
-    const body = await request.json();
-    const { title, content, excerpt, coverImage, tags } = body;
-
-    // التحقق من البيانات المطلوبة
-    if (!title || !content || !excerpt) {
-      return NextResponse.json(
-        { error: 'جميع الحقول مطلوبة' },
-        { status: 400 }
-      );
-    }
-
-    // إنشاء slug من العنوان
-    const slug = title
-      .toLowerCase()
-      .replace(/[^a-zA-Z0-9\u0600-\u06FF\s]/g, '')
-      .replace(/\s+/g, '-')
-      .substring(0, 100) + '-' + Date.now();
-
-    // تحديد حالة المقال بناءً على دور المستخدم
-    let status = 'PENDING';
-    let published = false;
-    let publishedAt = null;
-
-    if (user.role === 'MANAGER' || user.role === 'ADMIN') {
-      status = 'PUBLISHED';
-      published = true;
-      publishedAt = new Date();
-    }
-
-    const blogData = {
+    const {
       title,
       content,
       excerpt,
       slug,
-      coverImage: coverImage || null,
-      authorId: user.id,
-      authorName: user.name || user.email || 'كاتب مجهول',
-      authorAvatar: user.image || null,
-      tags: JSON.stringify(tags || []),
-      status: status as any,
-      published,
-      publishedAt,
-      approvedById: (user.role === 'MANAGER' || user.role === 'ADMIN') ? user.id : null
-    };
+      coverImage,
+      authorId,
+      authorName,
+      authorAvatar,
+      tags = [],
+      featured = false,
+      published = false
+    } = body
 
+    // التحقق من البيانات المطلوبة
+    if (!title || !content || !excerpt || !authorId || !authorName) {
+      return NextResponse.json(
+        { 
+          success: false,
+          error: "العنوان والمحتوى والمقدمة ومعلومات الكاتب مطلوبة" 
+        },
+        { status: 400 }
+      )
+    }
+
+    // إنشاء slug تلقائياً إذا لم يتم توفيره
+    const finalSlug = slug || title
+      .toLowerCase()
+      .replace(/[^\u0600-\u06FF\w\s-]/g, '') // الحفاظ على العربية والإنجليزية
+      .replace(/\s+/g, '-')
+      .trim()
+
+    // التحقق من أن الـ slug فريد
+    const existingPost = await prisma.blogPost.findUnique({
+      where: { slug: finalSlug }
+    })
+
+    if (existingPost) {
+      return NextResponse.json(
+        { 
+          success: false,
+          error: "رابط المقال موجود بالفعل" 
+        },
+        { status: 400 }
+      )
+    }
+
+    // التحقق من وجود المؤلف
+    const author = await prisma.user.findUnique({
+      where: { id: authorId },
+      select: { id: true, name: true, image: true }
+    })
+
+    if (!author) {
+      return NextResponse.json(
+        { 
+          success: false,
+          error: "المؤلف غير موجود" 
+        },
+        { status: 400 }
+      )
+    }
+
+    // إنشاء المقال
     const blog = await prisma.blogPost.create({
-      data: blogData,
+      data: {
+        title,
+        content,
+        excerpt,
+        slug: finalSlug,
+        coverImage: coverImage || null,
+        authorId,
+        authorName: authorName || author.name || 'مجهول',
+        authorAvatar: authorAvatar || author.image || null,
+        tags: JSON.stringify(Array.isArray(tags) ? tags : []),
+        featured,
+        status: published ? 'PUBLISHED' : 'PENDING',
+        published,
+        publishedAt: published ? new Date() : null,
+        isVisible: true
+      },
       include: {
         author: {
           select: {
             id: true,
             name: true,
             email: true,
-            image: true,
-            role: true
+            image: true
           }
         }
       }
-    });
+    })
 
     return NextResponse.json({
-      ...blog,
-      tags: JSON.parse(blog.tags)
-    });
+      success: true,
+      message: "تم إنشاء المقال بنجاح",
+      data: blog
+    }, { status: 201 })
 
-  } catch (error: any) {
-    console.error('Error creating blog:', error);
+  } catch (error) {
+    console.error("Error creating blog:", error)
+    
+    // التعامل مع أخطاء Prisma
+    if (error instanceof Error && error.message.includes('Unique constraint')) {
+      return NextResponse.json(
+        { 
+          success: false,
+          error: "رابط المقال موجود بالفعل" 
+        },
+        { status: 400 }
+      )
+    }
+
     return NextResponse.json(
-      { error: 'فشل في إنشاء المقال: ' + error.message },
+      { 
+        success: false,
+        error: "حدث خطأ في إنشاء المقال" 
+      },
       { status: 500 }
-    );
+    )
   }
 } 

@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,7 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// NextAuth.js Models
 model Account {
   id                String  @id @default(cuid())
   userId            String
@@ -27,8 +20,7 @@ model Account {
   scope             String?
   id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -42,37 +34,34 @@ model Session {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
-  password      String?
-  phone         String?
-  role          Role      @default(USER)
-  resetToken    String?   // Token لاستعادة كلمة المرور
-  resetTokenExpiry DateTime? // تاريخ انتهاء صلاحية Token
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  accounts        Account[]
-  sessions        Session[]
-  orders          Order[]
-  cartItems       CartItem[]
-  createdProducts Product[] @relation("ProductCreator")
-  reviews         Review[]
-  wishlistItems   Wishlist[]
-  createdPromoCodes PromoCode[] @relation("PromoCodeCreator")
-  authoredBlogs   BlogPost[] @relation("BlogAuthor")
-  approvedBlogs   BlogPost[] @relation("BlogApprover")
-  comments        Comment[] @relation("CommentAuthor")
-  siteSettings    SiteSettings[] @relation("SiteSettingsUpdater")
-  
-  // AI Content & Coins System
-  coins           UserCoins?
-  coinTransactions CoinTransaction[]
-  aiContents      AIContent[]
-  coinPurchases   CoinPurchase[]
+  id                String            @id @default(cuid())
+  name              String?
+  email             String            @unique
+  emailVerified     DateTime?
+  image             String?
+  password          String?
+  phone             String?
+  role              String            @default("USER")
+  resetToken        String?
+  resetTokenExpiry  DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  aiContents        AIContent[]
+  accounts          Account[]
+  approvedBlogs     BlogPost[]        @relation("BlogApprover")
+  authoredBlogs     BlogPost[]        @relation("BlogAuthor")
+  cartItems         CartItem[]
+  coinPurchases     CoinPurchase[]
+  coinTransactions  CoinTransaction[]
+  comments          Comment[]         @relation("CommentAuthor")
+  orders            Order[]
+  createdProducts   Product[]         @relation("ProductCreator")
+  createdPromoCodes PromoCode[]       @relation("PromoCodeCreator")
+  reviews           Review[]
+  sessions          Session[]
+  siteSettings      SiteSettings[]    @relation("SiteSettingsUpdater")
+  coins             UserCoins?
+  wishlistItems     Wishlist[]
 }
 
 model VerificationToken {
@@ -83,54 +72,50 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-// Business Models
 model Product {
-  id          String   @id @default(cuid())
-  title       String
-  description String
-  price       Float
-  discountedPrice Float?  // السعر بعد الخصم (اختياري)
-  hasDiscount Boolean  @default(false)  // هل يوجد خصم
-  image       String?
-  category    String
-  features    String // JSON array of features
-  isPopular   Boolean  @default(false)
-  isActive    Boolean  @default(true)
-  createdById String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  createdBy     User?       @relation("ProductCreator", fields: [createdById], references: [id])
-  orderItems    OrderItem[]
-  cartItems     CartItem[]
-  reviews       Review[]
-  wishlistItems Wishlist[]
+  id              String      @id @default(cuid())
+  title           String
+  description     String
+  price           Float
+  discountedPrice Float?
+  hasDiscount     Boolean     @default(false)
+  image           String?
+  category        String
+  features        String
+  isPopular       Boolean     @default(false)
+  isActive        Boolean     @default(true)
+  createdById     String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  cartItems       CartItem[]
+  orderItems      OrderItem[]
+  createdBy       User?       @relation("ProductCreator", fields: [createdById], references: [id])
+  reviews         Review[]
+  wishlistItems   Wishlist[]
 }
 
 model Order {
   id          String      @id @default(cuid())
   userId      String
-  status      OrderStatus @default(PENDING)
+  status      String      @default("PENDING")
   total       Float
   promoCodeId String?
   discount    Float       @default(0)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
-
-  user      User        @relation(fields: [userId], references: [id])
-  promoCode PromoCode?  @relation("OrderPromoCode", fields: [promoCodeId], references: [id])
-  items     OrderItem[]
+  promoCode   PromoCode?  @relation("OrderPromoCode", fields: [promoCodeId], references: [id])
+  user        User        @relation(fields: [userId], references: [id])
+  items       OrderItem[]
 }
 
 model OrderItem {
-  id        String @id @default(cuid())
+  id        String  @id @default(cuid())
   orderId   String
   productId String
-  quantity  Int    @default(1)
+  quantity  Int     @default(1)
   price     Float
-
-  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@unique([orderId, productId])
 }
@@ -142,9 +127,8 @@ model CartItem {
   quantity  Int      @default(1)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, productId])
 }
@@ -154,9 +138,8 @@ model Wishlist {
   userId    String
   productId String
   createdAt DateTime @default(now())
-
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, productId])
 }
@@ -165,60 +148,57 @@ model Review {
   id        String   @id @default(cuid())
   userId    String
   productId String
-  rating    Int      // 1-5 stars
+  rating    Int
   comment   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, productId]) // One review per user per product
+  @@unique([userId, productId])
 }
 
 model BlogPost {
-  id          String      @id @default(cuid())
-  title       String
-  content     String
-  excerpt     String
-  slug        String      @unique
-  coverImage  String?
-  authorId    String
-  authorName  String
-  authorAvatar String?
-  tags        String      // JSON array of tags
-  featured    Boolean     @default(false)
-  status      BlogStatus  @default(PENDING)  // حالة المقال
-  published   Boolean     @default(false)
-  isVisible   Boolean     @default(true)      // للتحكم في الإظهار/الإخفاء في الموقع
-  publishedAt DateTime?   // تاريخ النشر
-  rejectionReason String? // سبب الرفض
-  approvedById String?    // من وافق على المقال
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-
-  author      User        @relation("BlogAuthor", fields: [authorId], references: [id], onDelete: Cascade)
-  approvedBy  User?       @relation("BlogApprover", fields: [approvedById], references: [id])
-  featuredPost FeaturedBlogPost?
-  comments    Comment[]   @relation("BlogComments")
+  id              String            @id @default(cuid())
+  title           String
+  content         String
+  excerpt         String
+  slug            String            @unique
+  coverImage      String?
+  authorId        String
+  authorName      String
+  authorAvatar    String?
+  tags            String
+  featured        Boolean           @default(false)
+  status          String            @default("PENDING")
+  published       Boolean           @default(false)
+  isVisible       Boolean           @default(true)
+  publishedAt     DateTime?
+  rejectionReason String?
+  approvedById    String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  approvedBy      User?             @relation("BlogApprover", fields: [approvedById], references: [id])
+  author          User              @relation("BlogAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  comments        Comment[]         @relation("BlogComments")
+  featuredPost    FeaturedBlogPost?
 }
 
 model Comment {
-  id          String    @id @default(cuid())
-  content     String
-  blogPostId  String
-  authorId    String
-  authorName  String
+  id           String    @id @default(cuid())
+  content      String
+  blogPostId   String
+  authorId     String
+  authorName   String
   authorAvatar String?
-  parentId    String?   // للرد على تعليق آخر
-  isApproved  Boolean   @default(true)  // للإشراف على التعليقات
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  blogPost    BlogPost  @relation("BlogComments", fields: [blogPostId], references: [id], onDelete: Cascade)
-  author      User      @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
-  parent      Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies     Comment[] @relation("CommentReplies")
+  parentId     String?
+  isApproved   Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  parent       Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies      Comment[] @relation("CommentReplies")
+  author       User      @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  blogPost     BlogPost  @relation("BlogComments", fields: [blogPostId], references: [id], onDelete: Cascade)
 
   @@index([blogPostId])
   @@index([parentId])
@@ -235,22 +215,21 @@ model Category {
 }
 
 model PromoCode {
-  id          String   @id @default(cuid())
-  code        String   @unique
-  description String?
-  discountType String  // "PERCENTAGE" or "FIXED"
-  discountValue Float  // نسبة الخصم او المبلغ الثابت
-  minimumAmount Float?  // أقل مبلغ للشراء
-  maxUses     Int?     // عدد الاستخدامات المسموح
-  usedCount   Int      @default(0)
-  isActive    Boolean  @default(true)
-  expiresAt   DateTime?
-  createdById String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  createdBy   User     @relation("PromoCodeCreator", fields: [createdById], references: [id])
-  orders      Order[]  @relation("OrderPromoCode")
+  id            String    @id @default(cuid())
+  code          String    @unique
+  description   String?
+  discountType  String
+  discountValue Float
+  minimumAmount Float?
+  maxUses       Int?
+  usedCount     Int       @default(0)
+  isActive      Boolean   @default(true)
+  expiresAt     DateTime?
+  createdById   String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  orders        Order[]   @relation("OrderPromoCode")
+  createdBy     User      @relation("PromoCodeCreator", fields: [createdById], references: [id])
 }
 
 model HomeService {
@@ -258,10 +237,10 @@ model HomeService {
   title       String
   subtitle    String
   description String
-  features    String   // JSON array of features
-  icon        String   // Lucide icon name
-  gradient    String   // CSS gradient classes
-  bgGradient  String   // Background gradient for hover
+  features    String
+  icon        String
+  gradient    String
+  bgGradient  String
   isActive    Boolean  @default(true)
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
@@ -269,196 +248,125 @@ model HomeService {
 }
 
 model FeaturedBlogPost {
-  id          String   @id @default(cuid())
-  blogPostId  String   @unique
-  isActive    Boolean  @default(true)
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  blogPost    BlogPost @relation(fields: [blogPostId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  blogPostId String   @unique
+  isActive   Boolean  @default(true)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  blogPost   BlogPost @relation(fields: [blogPostId], references: [id], onDelete: Cascade)
 }
 
 model SiteSettings {
-  id                        String   @id @default(cuid())
-  siteName                  String   @default("AI Agency")
-  siteDescription           String?  @default("وكالة متخصصة في الذكاء الاصطناعي والتسويق الرقمي")
-  logo                      String?
-  primaryColor             String   @default("#3b82f6")
-  secondaryColor           String   @default("#8b5cf6")
-  
-  // إعدادات العملة
-  defaultCurrency          String   @default("SAR")        // العملة الافتراضية
-  currencySymbol           String   @default("ر.س")        // رمز العملة
-  currencyPosition         String   @default("after")      // موضع العملة: "before" أو "after"
-  decimalPlaces            Int      @default(2)           // عدد الخانات العشرية
-  
-  // معلومات الاتصال
-  phone1                   String?
-  phone2                   String?
-  email1                   String?
-  email2                   String?
-  address                  String?
-  
-  // وسائل التواصل الاجتماعي
-  facebookUrl              String?
-  twitterUrl               String?
-  instagramUrl             String?
-  linkedinUrl              String?
-  whatsappNumber           String?
-  telegramUrl              String?
-  youtubeUrl               String?
-  
-  // محتوى الصفحات
-  privacyPolicyContent     String?
-  termsOfServiceContent    String?
-  aboutUsContent           String?
-  privacyPolicyUrl         String?
-  termsOfServiceUrl        String?
-  
-  // إعدادات الموقع
-  enableRegistration       Boolean  @default(true)
-  enableComments           Boolean  @default(true)
-  enableNewsletter         Boolean  @default(true)
-  defaultUserRole          String   @default("USER")
-  
-  // SEO
-  metaTitle                String?
-  metaDescription          String?
-  metaKeywords             String?
-  
-  updatedById              String?
-  createdAt                DateTime @default(now())
-  updatedAt                DateTime @updatedAt
-
-  updatedBy                User?    @relation("SiteSettingsUpdater", fields: [updatedById], references: [id])
+  id                    String   @id @default(cuid())
+  siteName              String   @default("AI Agency")
+  siteDescription       String?  @default("وكالة متخصصة في الذكاء الاصطناعي والتسويق الرقمي")
+  logo                  String?
+  primaryColor          String   @default("#3b82f6")
+  secondaryColor        String   @default("#8b5cf6")
+  defaultCurrency       String   @default("SAR")
+  currencySymbol        String   @default("ر.س")
+  currencyPosition      String   @default("after")
+  decimalPlaces         Int      @default(2)
+  phone1                String?
+  phone2                String?
+  email1                String?
+  email2                String?
+  address               String?
+  facebookUrl           String?
+  twitterUrl            String?
+  instagramUrl          String?
+  linkedinUrl           String?
+  whatsappNumber        String?
+  telegramUrl           String?
+  youtubeUrl            String?
+  privacyPolicyContent  String?
+  termsOfServiceContent String?
+  aboutUsContent        String?
+  privacyPolicyUrl      String?
+  termsOfServiceUrl     String?
+  enableRegistration    Boolean  @default(true)
+  enableComments        Boolean  @default(true)
+  enableNewsletter      Boolean  @default(true)
+  defaultUserRole       String   @default("USER")
+  metaTitle             String?
+  metaDescription       String?
+  metaKeywords          String?
+  updatedById           String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  updatedBy             User?    @relation("SiteSettingsUpdater", fields: [updatedById], references: [id])
 }
 
-// AI Content Generation & Coins System
 model UserCoins {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-  balance         Int      @default(0)      // رصيد الكوينز الحالي
-  totalEarned     Int      @default(0)      // إجمالي الكوينز المكتسبة
-  totalSpent      Int      @default(0)      // إجمالي الكوينز المستخدمة
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  balance     Int      @default(0)
+  totalEarned Int      @default(0)
+  totalSpent  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model CoinTransaction {
-  id              String            @id @default(cuid())
-  userId          String
-  type            CoinTransactionType
-  amount          Int               // مقدار الكوينز (موجب للإضافة، سالب للخصم)
-  reason          String            // سبب المعاملة
-  description     String?           // وصف إضافي
-  relatedId       String?           // ID للعملية المرتبطة (AI content, order, etc.)
-  balanceBefore   Int               // الرصيد قبل المعاملة
-  balanceAfter    Int               // الرصيد بعد المعاملة
-  createdAt       DateTime          @default(now())
-
-  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String   @id @default(cuid())
+  userId        String
+  type          String
+  amount        Int
+  reason        String
+  description   String?
+  relatedId     String?
+  balanceBefore Int
+  balanceAfter  Int
+  createdAt     DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model AIContent {
-  id              String            @id @default(cuid())
-  userId          String
-  type            AIContentType
-  title           String
-  prompt          String            // النص المدخل من المستخدم
-  content         String            // المحتوى المولد
-  model           String            // نموذج AI المستخدم
-  coinsCost       Int               // عدد الكوينز المستخدمة
-  wordCount       Int?              // عدد الكلمات
-  language        String            @default("ar")
-  isBookmarked    Boolean           @default(false)
-  metadata        String?           // JSON لبيانات إضافية
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-
-  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String   @id @default(cuid())
+  userId       String
+  type         String
+  title        String
+  prompt       String
+  content      String
+  model        String
+  coinsCost    Int
+  wordCount    Int?
+  language     String   @default("ar")
+  isBookmarked Boolean  @default(false)
+  metadata     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model CoinPackage {
-  id              String   @id @default(cuid())
-  name            String
-  description     String?
-  coinAmount      Int               // عدد الكوينز في الباقة
-  price           Float             // السعر بالعملة المحلية
-  discount        Float    @default(0)  // نسبة الخصم
-  isPopular       Boolean  @default(false)
-  isActive        Boolean  @default(true)
-  bonusCoins      Int      @default(0)  // كوينز إضافية مجانية
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  purchases       CoinPurchase[]
+  id          String         @id @default(cuid())
+  name        String
+  description String?
+  coinAmount  Int
+  price       Float
+  discount    Float          @default(0)
+  isPopular   Boolean        @default(false)
+  isActive    Boolean        @default(true)
+  bonusCoins  Int            @default(0)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  purchases   CoinPurchase[]
 }
 
 model CoinPurchase {
-  id              String            @id @default(cuid())
-  userId          String
-  packageId       String
-  coinAmount      Int               // عدد الكوينز المشتراة
-  price           Float             // السعر المدفوع
-  paymentMethod   String?           // طريقة الدفع
-  paymentStatus   PaymentStatus     @default(PENDING)
-  transactionId   String?           // معرف المعاملة من نظام الدفع
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-
-  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  package         CoinPackage       @relation(fields: [packageId], references: [id])
-}
-
-// Enums
-enum Role {
-  USER
-  MANAGER
-  ADMIN
-}
-
-enum OrderStatus {
-  PENDING
-  PROCESSING
-  COMPLETED
-  CANCELLED
-}
-
-enum BlogStatus {
-  PENDING     // في انتظار الموافقة
-  APPROVED    // موافق عليه
-  REJECTED    // مرفوض
-  PUBLISHED   // منشور
-}
-
-enum CoinTransactionType {
-  PURCHASE      // شراء كوينز
-  SPEND         // استخدام كوينز
-  BONUS         // كوينز مجانية
-  REFUND        // استرداد كوينز
-  REWARD        // مكافأة
-}
-
-enum AIContentType {
-  ARTICLE       // مقال
-  BLOG_POST     // مقال مدونة
-  SOCIAL_POST   // منشور وسائل التواصل
-  PRODUCT_DESC  // وصف منتج
-  EMAIL         // بريد إلكتروني
-  AD_COPY       // نص إعلاني
-  SCRIPT        // سكريبت
-  SUMMARY       // ملخص
-  TRANSLATION   // ترجمة
-  REWRITE       // إعادة صياغة
-}
-
-enum PaymentStatus {
-  PENDING       // في انتظار الدفع
-  COMPLETED     // تم الدفع
-  FAILED        // فشل الدفع
-  REFUNDED      // تم الاسترداد
-  CANCELLED     // ملغى
+  id            String      @id @default(cuid())
+  userId        String
+  packageId     String
+  coinAmount    Int
+  price         Float
+  paymentMethod String?
+  paymentStatus String      @default("PENDING")
+  transactionId String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  package       CoinPackage @relation(fields: [packageId], references: [id])
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
