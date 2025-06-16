@@ -130,14 +130,39 @@ export async function POST(request: Request) {
       published = false
     } = body
 
-    // التحقق من البيانات المطلوبة
-    if (!title || !content || !excerpt || !authorId || !authorName) {
+    // التحقق من البيانات الأساسية المطلوبة
+    if (!title || !content || !excerpt) {
       return NextResponse.json(
         { 
           success: false,
-          error: "العنوان والمحتوى والمقدمة ومعلومات الكاتب مطلوبة" 
+          error: "العنوان والمحتوى والمقدمة مطلوبة" 
         },
         { status: 400 }
+      )
+    }
+
+    // محاولة الحصول على session للاستخدام العادي
+    const session = await getServerSession(authOptions) as any
+    
+    let finalAuthorId = authorId
+    let finalAuthorName = authorName
+    let finalAuthorAvatar = authorAvatar
+
+    // إذا لم يتم توفير authorId، محاولة الحصول عليه من الـ session
+    if (!finalAuthorId && session?.user?.id) {
+      finalAuthorId = session.user.id
+      finalAuthorName = finalAuthorName || session.user.name || session.user.email || 'مستخدم مجهول'
+      finalAuthorAvatar = finalAuthorAvatar || session.user.image
+    }
+
+    // التحقق من وجود معلومات الكاتب
+    if (!finalAuthorId) {
+      return NextResponse.json(
+        { 
+          success: false,
+          error: "يجب تسجيل الدخول أو توفير معلومات الكاتب" 
+        },
+        { status: 401 }
       )
     }
 
@@ -165,7 +190,7 @@ export async function POST(request: Request) {
 
     // التحقق من وجود المؤلف
     const author = await prisma.user.findUnique({
-      where: { id: authorId },
+      where: { id: finalAuthorId },
       select: { id: true, name: true, image: true }
     })
 
@@ -187,9 +212,9 @@ export async function POST(request: Request) {
         excerpt,
         slug: finalSlug,
         coverImage: coverImage || null,
-        authorId,
-        authorName: authorName || author.name || 'مجهول',
-        authorAvatar: authorAvatar || author.image || null,
+        authorId: finalAuthorId,
+        authorName: finalAuthorName || author.name || 'مجهول',
+        authorAvatar: finalAuthorAvatar || author.image || null,
         tags: JSON.stringify(Array.isArray(tags) ? tags : []),
         featured,
         status: published ? 'PUBLISHED' : 'PENDING',

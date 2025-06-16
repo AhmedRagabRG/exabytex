@@ -79,6 +79,22 @@ curl -X GET "http://localhost:3000/api/blogs?page=1&limit=5&status=PUBLISHED&fea
 **POST** `/api/blogs`
 
 #### متطلبات الطلب
+
+**للاستخدام العادي (مع تسجيل الدخول):**
+```json
+{
+  "title": "عنوان المقال", // مطلوب
+  "content": "محتوى المقال الكامل", // مطلوب
+  "excerpt": "مقدمة أو ملخص المقال", // مطلوب
+  "slug": "article-slug", // اختياري (سيتم إنشاؤه تلقائياً من العنوان)
+  "coverImage": "https://example.com/image.jpg", // اختياري
+  "tags": ["تقنية", "برمجة"], // اختياري
+  "featured": false, // اختياري - افتراضي false
+  "published": true // اختياري - افتراضي false
+}
+```
+
+**للاستخدام الخارجي (بدون session):**
 ```json
 {
   "title": "عنوان المقال", // مطلوب
@@ -246,20 +262,53 @@ curl -X DELETE "http://localhost:3000/api/blogs/clx123456789"
 
 ## ملاحظات مهمة
 
-1. **المؤلف (Author)**: يجب أن يكون `authorId` موجود في قاعدة البيانات
-2. **Slug**: إذا لم تقم بتوفير slug، سيتم إنشاؤه تلقائياً من العنوان
-3. **Tags**: يتم حفظها كـ JSON array في قاعدة البيانات
-4. **الحالة (Status)**: 
+1. **طريقتان للاستخدام**:
+   - **الاستخدام العادي**: مع session مسجل دخول - لا يحتاج `authorId`
+   - **الاستخدام الخارجي**: بدون session - يجب توفير `authorId` و `authorName`
+
+2. **المؤلف (Author)**: يجب أن يكون `authorId` موجود في قاعدة البيانات (للاستخدام الخارجي)
+
+3. **Slug**: إذا لم تقم بتوفير slug، سيتم إنشاؤه تلقائياً من العنوان
+
+4. **Tags**: يتم حفظها كـ JSON array في قاعدة البيانات
+
+5. **الحالة (Status)**: 
    - `PENDING`: في انتظار المراجعة
    - `PUBLISHED`: منشور
    - `DRAFT`: مسودة
-5. **النشر**: إذا كان `published: true`، سيتم تعيين `publishedAt` تلقائياً
+
+6. **النشر**: إذا كان `published: true`، سيتم تعيين `publishedAt` تلقائياً
+
+7. **المصادقة**: للاستخدام العادي، تأكد من إرسال cookies الخاصة بالـ session
 
 ## أمثلة على الاستخدام في JavaScript
 
-### إنشاء مقال جديد
+### إنشاء مقال جديد (للاستخدام العادي مع session)
 ```javascript
 const createBlog = async () => {
+  const response = await fetch('http://localhost:3000/api/blogs', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include', // مهم لإرسال cookies
+    body: JSON.stringify({
+      title: 'مقال جديد',
+      content: 'محتوى المقال...',
+      excerpt: 'مقدمة المقال',
+      tags: ['تقنية', 'برمجة'],
+      published: true
+    })
+  });
+  
+  const data = await response.json();
+  console.log(data);
+};
+```
+
+### إنشاء مقال جديد (للاستخدام الخارجي)
+```javascript
+const createBlogExternal = async () => {
   const response = await fetch('http://localhost:3000/api/blogs', {
     method: 'POST',
     headers: {

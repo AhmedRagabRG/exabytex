@@ -94,10 +94,12 @@ export function BlogManagement() {
     setLoading(true);
     try {
       console.log('🔄 Starting to fetch blogs with filter:', filter);
-      const url = `/api/blogs?status=${filter}&limit=50&admin=true`;
+      const url = `/api/blogs?status=${filter}&limit=50`;
       console.log('📡 Fetching URL:', url);
       
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        credentials: 'include' // مهم للـ session
+      });
       console.log('📥 Response status:', response.status, response.statusText);
       
       if (!response.ok) {
@@ -111,15 +113,37 @@ export function BlogManagement() {
       const data = await response.json();
       console.log('✅ Fetched blogs data:', data);
       console.log('📊 Data type:', typeof data);
-      console.log('📋 Data.blogs type:', typeof data.blogs);
-      console.log('📋 Data.blogs length:', data.blogs?.length);
+      console.log('📋 Data structure:', data);
       
-      if (data && Array.isArray(data.blogs)) {
+      // الـ API الجديد يرجع { success: true, data: { blogs: [...], pagination: {...} } }
+      if (data.success && data.data && Array.isArray(data.data.blogs)) {
+        console.log('✅ Setting blogs from data.data.blogs:', data.data.blogs.length, 'items');
+        // معالجة tags - تحويل من string إلى array إذا لزم الأمر
+        const processedBlogs = data.data.blogs.map((blog: any) => ({
+          ...blog,
+          tags: Array.isArray(blog.tags) 
+            ? blog.tags 
+            : (typeof blog.tags === 'string' ? JSON.parse(blog.tags || '[]') : [])
+        }));
+        setBlogs(processedBlogs);
+      } else if (data && Array.isArray(data.blogs)) {
         console.log('✅ Setting blogs from data.blogs:', data.blogs.length, 'items');
-        setBlogs(data.blogs);
+        const processedBlogs = data.blogs.map((blog: any) => ({
+          ...blog,
+          tags: Array.isArray(blog.tags) 
+            ? blog.tags 
+            : (typeof blog.tags === 'string' ? JSON.parse(blog.tags || '[]') : [])
+        }));
+        setBlogs(processedBlogs);
       } else if (Array.isArray(data)) {
         console.log('✅ Setting blogs from data:', data.length, 'items');
-        setBlogs(data);
+        const processedBlogs = data.map((blog: any) => ({
+          ...blog,
+          tags: Array.isArray(blog.tags) 
+            ? blog.tags 
+            : (typeof blog.tags === 'string' ? JSON.parse(blog.tags || '[]') : [])
+        }));
+        setBlogs(processedBlogs);
       } else {
         console.error('❌ Unexpected data format:', data);
         setBlogs([]);

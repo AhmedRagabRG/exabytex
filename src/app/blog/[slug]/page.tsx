@@ -41,11 +41,13 @@ interface BlogPostPageProps {
 
 const getPostBySlug = async (slug: string): Promise<BlogPost | null> => {
   try {
-    const response = await fetch(`/api/blogs?slug=${slug}`)
+    // استخدام الـ endpoint الجديد لجلب مقال واحد
+    const response = await fetch(`/api/blogs/${slug}`)
     if (!response.ok) return null
     
     const data = await response.json()
-    return data.post || data.blogs?.[0] || null
+    // الـ API الجديد يرجع { success: true, data: {...} }
+    return data.success && data.data ? data.data : null
   } catch (error) {
     console.error('Error fetching post:', error)
     return null

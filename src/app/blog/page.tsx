@@ -59,7 +59,18 @@ export default function BlogPage() {
     try {
       const response = await fetch('/api/blogs?status=PUBLISHED&limit=50');
       const data = await response.json();
-      setBlogs(data.blogs || []);
+      // الـ API الجديد يرجع { success: true, data: { blogs: [...] } }
+      const rawBlogs = data.success && data.data ? data.data.blogs : (data.blogs || []);
+      
+      // معالجة tags - تحويل من string إلى array إذا لزم الأمر
+      const processedBlogs = rawBlogs.map((blog: any) => ({
+        ...blog,
+        tags: Array.isArray(blog.tags) 
+          ? blog.tags 
+          : (typeof blog.tags === 'string' ? JSON.parse(blog.tags || '[]') : [])
+      }));
+      
+      setBlogs(processedBlogs);
     } catch (error) {
       console.error('Error fetching blogs:', error);
     } finally {
@@ -69,7 +80,7 @@ export default function BlogPage() {
 
   // استخراج جميع التاجز
   const allTags = Array.from(
-    new Set(blogs.flatMap(blog => blog.tags))
+    new Set(blogs.flatMap(blog => Array.isArray(blog.tags) ? blog.tags : []))
   ).slice(0, 20); // أول 20 تاج
 
   // تصفية المقالات
@@ -79,7 +90,7 @@ export default function BlogPage() {
       blog.excerpt.toLowerCase().includes(searchTerm.toLowerCase()) ||
       blog.authorName.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesTag = !selectedTag || blog.tags.includes(selectedTag);
+    const matchesTag = !selectedTag || (Array.isArray(blog.tags) && blog.tags.includes(selectedTag));
     
     return matchesSearch && matchesTag;
   });
@@ -209,7 +220,7 @@ export default function BlogPage() {
                         <Star className="h-3 w-3 ml-1" />
                         مميز
                       </Badge>
-                      {blog.tags.slice(0, 2).map((tag, index) => (
+                      {(Array.isArray(blog.tags) ? blog.tags : []).slice(0, 2).map((tag, index) => (
                         <Badge key={index} variant="outline" className="border-white/20 text-gray-300">
                           {tag}
                         </Badge>
@@ -318,7 +329,7 @@ export default function BlogPage() {
                   )}
                   <CardHeader>
                     <div className="flex flex-wrap gap-1 mb-2">
-                      {blog.tags.slice(0, 3).map((tag, index) => (
+                      {(Array.isArray(blog.tags) ? blog.tags : []).slice(0, 3).map((tag, index) => (
                         <Badge key={index} variant="outline" className="border-white/20 text-gray-300 text-xs">
                           {tag}
                         </Badge>

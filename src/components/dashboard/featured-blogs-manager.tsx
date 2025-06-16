@@ -73,7 +73,16 @@ export function FeaturedBlogsManager() {
       const response = await fetch('/api/blogs?status=PUBLISHED&published=true')
       if (response.ok) {
         const data = await response.json()
-        setAvailableBlogs(data.blogs || [])
+        // الـ API الجديد يرجع { success: true, data: { blogs: [...] } }
+        const rawBlogs = data.success && data.data ? data.data.blogs : (data.blogs || [])
+        // معالجة tags - تحويل من string إلى array إذا لزم الأمر
+        const processedBlogs = rawBlogs.map((blog: any) => ({
+          ...blog,
+          tags: Array.isArray(blog.tags) 
+            ? blog.tags 
+            : (typeof blog.tags === 'string' ? JSON.parse(blog.tags || '[]') : [])
+        }));
+        setAvailableBlogs(processedBlogs)
       }
     } catch (error) {
       console.error('Error fetching available blogs:', error)
