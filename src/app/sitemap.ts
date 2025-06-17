@@ -1,77 +1,68 @@
 import { MetadataRoute } from 'next'
 import { PrismaClient } from '@prisma/client'
 
-const prisma = new PrismaClient()
+// تعريف الروابط الثابتة خارج الدالة
+const staticUrls: MetadataRoute.Sitemap = [
+  {
+    url: 'https://exabytex.com',
+    lastModified: new Date(),
+    changeFrequency: 'daily' as const,
+    priority: 1,
+  },
+  {
+    url: 'https://exabytex.com/blog',
+    lastModified: new Date(),
+    changeFrequency: 'daily' as const,
+    priority: 0.8,
+  },
+  {
+    url: 'https://exabytex.com/about',
+    lastModified: new Date(),
+    changeFrequency: 'monthly' as const,
+    priority: 0.5,
+  },
+  {
+    url: 'https://exabytex.com/contact',
+    lastModified: new Date(),
+    changeFrequency: 'monthly' as const,
+    priority: 0.5,
+  },
+]
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  // إذا كان في وضع التطوير، نرجع الروابط الثابتة فقط
+  if (process.env.NODE_ENV === 'development') {
+    return staticUrls
+  }
+
+  let prisma: PrismaClient | null = null
   try {
-    // الحصول على جميع المقالات المنشورة
+    prisma = new PrismaClient()
     const posts = await prisma.blogPost.findMany({
       where: {
-        status: 'PUBLISHED',
-        published: true
+        published: true,
       },
       select: {
         slug: true,
-        updatedAt: true
-      }
+        updatedAt: true,
+      },
     })
 
-    // إنشاء روابط المقالات
-    const postUrls = posts.map((post) => ({
+    const postUrls: MetadataRoute.Sitemap = posts.map((post) => ({
       url: `https://exabytex.com/blog/${post.slug}`,
       lastModified: post.updatedAt,
       changeFrequency: 'weekly' as const,
-      priority: 0.8
+      priority: 0.7,
     }))
-
-    // الروابط الثابتة للموقع
-    const staticUrls = [
-      {
-        url: 'https://exabytex.com',
-        lastModified: new Date(),
-        changeFrequency: 'daily' as const,
-        priority: 1
-      },
-      {
-        url: 'https://exabytex.com/blog',
-        lastModified: new Date(),
-        changeFrequency: 'daily' as const,
-        priority: 0.9
-      },
-      {
-        url: 'https://exabytex.com/about',
-        lastModified: new Date(),
-        changeFrequency: 'monthly' as const,
-        priority: 0.7
-      },
-      {
-        url: 'https://exabytex.com/contact',
-        lastModified: new Date(),
-        changeFrequency: 'monthly' as const,
-        priority: 0.7
-      }
-    ]
 
     return [...staticUrls, ...postUrls]
   } catch (error) {
     console.error('Error generating sitemap:', error)
-    // في حالة حدوث خطأ، نعيد الروابط الثابتة فقط
-    return [
-      {
-        url: 'https://exabytex.com',
-        lastModified: new Date(),
-        changeFrequency: 'daily' as const,
-        priority: 1
-      },
-      {
-        url: 'https://exabytex.com/blog',
-        lastModified: new Date(),
-        changeFrequency: 'daily' as const,
-        priority: 0.9
-      }
-    ]
+    // في حالة فشل الاتصال بقاعدة البيانات، نرجع الروابط الثابتة فقط
+    return staticUrls
   } finally {
-    await prisma.$disconnect()
+    if (prisma) {
+      await prisma.$disconnect()
+    }
   }
 } 

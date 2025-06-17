@@ -1,25 +1,26 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 
 export default function PaymentFailedPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
 
   useEffect(() => {
-    // نقل جميع الـ parameters إلى صفحة النجاح مع تغيير الحالة
-    const params = new URLSearchParams(searchParams.toString())
-    params.set('status', 'failed')
+    // الحصول على الـ parameters من الـ URL مباشرة
+    const params = new URLSearchParams(window.location.search)
+    const orderId = params.get('order_id')
+    const error = params.get('error') || 'فشلت عملية الدفع. يرجى المحاولة مرة أخرى.'
     
-    // إضافة رسالة الخطأ إذا كانت موجودة
-    if (!params.has('error')) {
-      params.set('error', 'فشلت عملية الدفع. يرجى المحاولة مرة أخرى.')
-    }
+    // إنشاء URL جديد لصفحة النجاح
+    const successUrl = new URL('/payment/success', window.location.origin)
+    successUrl.searchParams.set('status', 'failed')
+    if (orderId) successUrl.searchParams.set('order_id', orderId)
+    successUrl.searchParams.set('error', error)
     
-    // التوجيه إلى صفحة النجاح مع الـ parameters المحدثة
-    router.replace(`/payment/success?${params.toString()}`)
-  }, [router, searchParams])
+    // التوجيه إلى صفحة النجاح
+    router.replace(successUrl.toString())
+  }, [router])
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
