@@ -144,13 +144,13 @@ export async function POST(request: NextRequest) {
     const paymentData = {
       merchantId: KASHIER_CONFIG.merchantId,
       orderId: orderId,
-      amount: formattedAmount.toFixed(2), // تأكد من format صحيح
+      amount: formattedAmount.toFixed(2),
       currency: 'EGP',
       hash: '',
       customer: cleanCustomer,
-      redirectUrl: `${baseUrl}/payment/success`,
-      failureUrl: `${baseUrl}/payment/failure`, 
-      cancelUrl: `${baseUrl}/`,
+      redirectUrl: `${baseUrl}/payment/success?status=success&order_id=${orderId}&amount=${formattedAmount}&currency=EGP`,
+      failureUrl: `${baseUrl}/payment/failed?order_id=${orderId}&error=فشلت عملية الدفع. يرجى المحاولة مرة أخرى.`, 
+      cancelUrl: `${baseUrl}/payment/failed?order_id=${orderId}&error=تم إلغاء عملية الدفع.`,
       webhookUrl: `${baseUrl}/api/kashier/webhook`,
       description: sanitizeString(`منتجات رقمية - طلب رقم ${orderId}`),
       reference: orderId,
