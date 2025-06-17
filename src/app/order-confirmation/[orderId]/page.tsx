@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Download, CheckCircle, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
+import { useCartStore } from '@/store/cartStore';
 
 interface OrderItem {
   id: string;
@@ -33,6 +34,7 @@ export default function OrderConfirmation() {
   const params = useParams();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
+  const { setAppliedPromo } = useCartStore();
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -56,6 +58,12 @@ export default function OrderConfirmation() {
       fetchOrder();
     }
   }, [params.orderId]);
+
+  useEffect(() => {
+    // مسح الكوبون المطبق عند تحميل صفحة تأكيد الطلب
+    setAppliedPromo(null);
+    localStorage.removeItem('appliedPromo');
+  }, [setAppliedPromo]);
 
   if (loading) {
     return (

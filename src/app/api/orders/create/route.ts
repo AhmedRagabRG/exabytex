@@ -85,6 +85,19 @@ export async function POST(req: Request) {
       }
     });
 
+    // تحديث عداد استخدام كود الخصم إذا تم استخدامه
+    if (body.promoCode) {
+      await prisma.promoCode.update({
+        where: { code: body.promoCode.code },
+        data: {
+          usedCount: {
+            increment: 1
+          }
+        }
+      });
+      console.log(`Updated promo code usage count for: ${body.promoCode.code}`);
+    }
+
     console.log('Free order created successfully:', order.id);
 
     // إرسال بريد إلكتروني لكل منتج في الطلب
@@ -119,6 +132,11 @@ export async function POST(req: Request) {
         }
       });
       console.log('Cart items removed successfully');
+
+      // حذف الكوبون المطبق من localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('appliedPromo');
+      }
     } catch (cartError) {
       console.error('Error clearing cart items:', cartError);
       // نستمر في العملية حتى لو فشل حذف عناصر السلة

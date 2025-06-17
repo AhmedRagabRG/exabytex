@@ -80,6 +80,19 @@ export async function POST(request: NextRequest) {
             }
           });
 
+          // تحديث عداد استخدام كود الخصم إذا تم استخدامه
+          if (order.promoCode) {
+            await prisma.promoCode.update({
+              where: { code: order.promoCode.code },
+              data: {
+                usedCount: {
+                  increment: 1
+                }
+              }
+            });
+            console.log(`Updated promo code usage count for: ${order.promoCode.code}`);
+          }
+
           // إرسال بريد إلكتروني لكل منتج
           for (const item of order.items) {
             if (item.product.downloadUrl) {

@@ -1,7 +1,6 @@
 import CredentialsProvider from "next-auth/providers/credentials"
 import GoogleProvider from "next-auth/providers/google"
 import DiscordProvider from "next-auth/providers/discord"
-import { PrismaAdapter } from "@auth/prisma-adapter"
 import { prisma } from "./prisma"
 import bcrypt from "bcryptjs"
 
