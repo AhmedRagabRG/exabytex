@@ -81,7 +81,7 @@ model Product {
   hasDiscount     Boolean     @default(false)
   image           String?
   category        String
-  features        String
+  features        String      @default("[]")
   isPopular       Boolean     @default(false)
   isActive        Boolean     @default(true)
   createdById     String?
@@ -92,6 +92,9 @@ model Product {
   createdBy       User?       @relation("ProductCreator", fields: [createdById], references: [id])
   reviews         Review[]
   wishlistItems   Wishlist[]
+  emailSubject    String?
+  emailContent    String?
+  downloadUrl     String?
 }
 
 model Order {
@@ -106,6 +109,8 @@ model Order {
   promoCode   PromoCode?  @relation("OrderPromoCode", fields: [promoCodeId], references: [id])
   user        User        @relation(fields: [userId], references: [id])
   items       OrderItem[]
+  isFree      Boolean     @default(false)
+  paymentSession PaymentSession?
 }
 
 model OrderItem {
@@ -369,4 +374,15 @@ model CoinPurchase {
   updatedAt     DateTime    @updatedAt
   package       CoinPackage @relation(fields: [packageId], references: [id])
   user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PaymentSession {
+  id        String   @id @default(cuid())
+  orderId   String   @unique
+  amount    Float
+  currency  String   @default("EGP")
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  order     Order    @relation(fields: [orderId], references: [id])
 }

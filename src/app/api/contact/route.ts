@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
               </div>
               
               <div style="background: #333; color: white; padding: 20px; text-align: center; font-size: 12px;">
-                <p style="margin: 0;">© 2024 Exa ByteX. جميع الحقوق محفوظة.</p>
+                <p style="margin: 0;">© 2025 Exa ByteX. جميع الحقوق محفوظة.</p>
                 <p style="margin: 5px 0 0 0;">نظام إدارة الرسائل التلقائي</p>
               </div>
             </div>
@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
               </div>
               
               <div style="background: #333; color: white; padding: 20px; text-align: center; font-size: 12px;">
-                <p style="margin: 0;">© 2024 Exa ByteX. جميع الحقوق محفوظة.</p>
+                <p style="margin: 0;">© 2025 Exa ByteX. جميع الحقوق محفوظة.</p>
                 <p style="margin: 5px 0 0 0;">شكراً لثقتك في خدماتنا</p>
               </div>
             </div>

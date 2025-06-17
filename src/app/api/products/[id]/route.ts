@@ -6,176 +6,119 @@ import { Session } from 'next-auth';
 
 const prisma = new PrismaClient();
 
-// GET - جلب منتج واحد
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-    const product = await prisma.product.findUnique({
-      where: { id },
-      include: {
-        createdBy: {
-          select: {
-            name: true,
-            email: true
-          }
-        }
-      }
-    });
+interface RouteParams {
+  params: {
+    id: string
+  }
+}
 
-    if (!product) {
-      return NextResponse.json(
-        { error: 'المنتج غير موجود' },
-        { status: 404 }
-      );
+// GET - جلب منتج واحد
+export async function GET(req: Request, { params }: RouteParams) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) {
+      return new NextResponse('Unauthorized', { status: 401 })
     }
 
-    return NextResponse.json({
-      ...product,
-      features: JSON.parse(product.features || '[]')
-    });
+    const product = await prisma.product.findUnique({
+      where: {
+        id: params.id,
+      },
+    })
+
+    if (!product) {
+      return new NextResponse('Product not found', { status: 404 })
+    }
+
+    return NextResponse.json(product)
   } catch (error) {
-    console.error('Error fetching product:', error);
-    return NextResponse.json(
-      { error: 'فشل في جلب المنتج' },
-      { status: 500 }
-    );
+    console.error('Error fetching product:', error)
+    return new NextResponse('Internal Server Error', { status: 500 })
   }
 }
 
 // PUT - تحديث منتج
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(req: Request, { params }: RouteParams) {
   try {
-    const { id } = await params;
-    console.log('PUT Request for product ID:', id);
-    
-    const session = await getServerSession(authOptions) as Session;
-    
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: 'يجب تسجيل الدخول أولاً' },
-        { status: 401 }
-      );
+    const session = await getServerSession(authOptions)
+    if (!session?.user) {
+      return new NextResponse('Unauthorized', { status: 401 })
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
-    });
-
-    if (!user || (user.role !== 'MANAGER' && user.role !== 'ADMIN')) {
-      return NextResponse.json(
-        { error: 'ليس لديك صلاحية لتحديث المنتجات' },
-        { status: 403 }
-      );
-    }
-
-    const body = await request.json();
-    console.log('Update request body:', body);
-    
-    const { title, description, price, discountedPrice, hasDiscount, image, category, features, isPopular } = body;
-
-    // التحقق من صحة بيانات الخصم
-    if (hasDiscount && (!discountedPrice || parseFloat(discountedPrice) >= parseFloat(price))) {
-      return NextResponse.json(
-        { error: 'السعر بعد الخصم يجب أن يكون أقل من السعر الأصلي' },
-        { status: 400 }
-      );
-    }
-
-    // التأكد من أن isActive يبقى true عند التحديث
-    const updateData = {
-      title,
-      description,
-      price: parseFloat(price),
-      discountedPrice: hasDiscount ? parseFloat(discountedPrice) : null,
-      hasDiscount: Boolean(hasDiscount),
-      image,
-      category,
-      features: JSON.stringify(features || []),
-      isPopular: Boolean(isPopular),
-      isActive: true, // التأكد من بقاء المنتج نشطاً
-      updatedAt: new Date()
-    };
-    
-    console.log('Update data to be saved:', updateData);
+    const body = await req.json()
+    const { name, description, price, image, emailSubject, emailContent } = body
 
     const product = await prisma.product.update({
-      where: { id },
-      data: updateData,
-      include: {
-        createdBy: {
-          select: {
-            name: true,
-            email: true
-          }
-        }
-      }
-    });
+      where: {
+        id: params.id,
+      },
+      data: {
+        name,
+        description,
+        price,
+        image,
+        emailSubject,
+        emailContent,
+      },
+    })
 
-    console.log('Product updated successfully:', product);
-
-    return NextResponse.json({
-      ...product,
-      features: JSON.parse(product.features)
-    });
-
+    return NextResponse.json(product)
   } catch (error) {
-    console.error('Error updating product:', error);
-    return NextResponse.json(
-      { error: 'فشل في تحديث المنتج' },
-      { status: 500 }
-    );
+    console.error('Error updating product:', error)
+    return new NextResponse('Internal Server Error', { status: 500 })
   }
 }
 
 // DELETE - حذف منتج
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(req: Request, { params }: RouteParams) {
   try {
-    const { id } = await params;
-    const session = await getServerSession(authOptions) as Session;
-    
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: 'يجب تسجيل الدخول أولاً' },
-        { status: 401 }
-      );
+    const session = await getServerSession(authOptions)
+    if (!session?.user) {
+      return new NextResponse('Unauthorized', { status: 401 })
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
+    const productId = params.id;
+
+    // التحقق من وجود المنتج
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
     });
 
-    if (!user || (user.role !== 'MANAGER' && user.role !== 'ADMIN')) {
-      return NextResponse.json(
-        { error: 'ليس لديك صلاحية لحذف المنتجات' },
-        { status: 403 }
-      );
+    if (!product) {
+      return new NextResponse('Product not found', { status: 404 });
     }
 
-    // حذف المنتج (soft delete)
-    await prisma.product.update({
-      where: { id },
-      data: {
-        isActive: false,
-        updatedAt: new Date()
-      }
+    // حذف جميع السجلات المرتبطة في ترتيب صحيح
+    await prisma.$transaction(async (tx) => {
+      // حذف المراجعات
+      await tx.review.deleteMany({
+        where: { productId },
+      });
+
+      // حذف عناصر قائمة الرغبات
+      await tx.wishlist.deleteMany({
+        where: { productId },
+      });
+
+      // حذف عناصر السلة
+      await tx.cartItem.deleteMany({
+        where: { productId },
+      });
+
+      // حذف عناصر الطلبات
+      await tx.orderItem.deleteMany({
+        where: { productId },
+      });
+
+      // أخيراً، حذف المنتج نفسه
+      await tx.product.delete({
+        where: { id: productId },
+      });
     });
 
-    return NextResponse.json({ message: 'تم حذف المنتج بنجاح' });
-
+    return new NextResponse(null, { status: 204 });
   } catch (error) {
     console.error('Error deleting product:', error);
-    return NextResponse.json(
-      { error: 'فشل في حذف المنتج' },
-      { status: 500 }
-    );
+    return new NextResponse('Internal Server Error', { status: 500 });
   }
 } 

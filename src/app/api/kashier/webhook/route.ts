@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { prisma } from '@/lib/prisma';
+import { sendProductPurchaseEmail } from '@/lib/email';
 
 // إعدادات Kashier
 const KASHIER_CONFIG = {
@@ -51,21 +53,78 @@ export async function POST(request: NextRequest) {
       case 'SUCCESS':
       case 'PAID':
         console.log(`Payment successful for order ${orderId}, transaction: ${transactionId}`);
-        // تحديث حالة الطلب إلى "مدفوع"
-        // await updateOrderStatus(orderId, 'paid', { transactionId });
+        
+        try {
+          // جلب معلومات الطلب
+          const order = await prisma.order.findUnique({
+            where: { id: orderId },
+            include: {
+              items: {
+                include: {
+                  product: true
+                }
+              },
+              user: true
+            }
+          });
+
+          if (!order || !order.user) {
+            throw new Error('Order or user not found');
+          }
+
+          // تحديث حالة الطلب إلى "مكتمل"
+          await prisma.order.update({
+            where: { id: orderId },
+            data: {
+              status: 'COMPLETED',
+            }
+          });
+
+          // إرسال بريد إلكتروني لكل منتج
+          for (const item of order.items) {
+            if (item.product.downloadUrl) {
+              await sendProductPurchaseEmail({
+                email: order.user.email,
+                productName: item.product.title,
+                orderId: order.id,
+                downloadUrl: item.product.downloadUrl || '',
+                customSubject: item.product.emailSubject || undefined,
+                customContent: item.product.emailContent || undefined
+              });
+            }
+          }
+
+          // حذف المنتجات من السلة
+          await prisma.cartItem.deleteMany({
+            where: {
+              userId: order.user.id,
+              productId: {
+                in: order.items.map(item => item.productId)
+              }
+            }
+          });
+
+          console.log(`Order ${orderId} processed successfully`);
+        } catch (error) {
+          console.error('Error processing successful payment:', error);
+        }
         break;
         
       case 'FAILED':
       case 'CANCELLED':
         console.log(`Payment failed for order ${orderId}`);
-        // تحديث حالة الطلب إلى "فاشل"
-        // await updateOrderStatus(orderId, 'failed');
+        await prisma.order.update({
+          where: { id: orderId },
+          data: { status: 'FAILED' }
+        });
         break;
         
       case 'PENDING':
         console.log(`Payment pending for order ${orderId}`);
-        // تحديث حالة الطلب إلى "معلق"
-        // await updateOrderStatus(orderId, 'pending');
+        await prisma.order.update({
+          where: { id: orderId },
+          data: { status: 'PENDING' }
+        });
         break;
         
       default:

@@ -28,7 +28,7 @@ export async function GET() {
       id: item.id, // استخدام cart item ID بدلاً من product ID
       productId: item.product.id,
       name: item.product.title,
-      price: item.product.price,
+      price: item.product.hasDiscount && item.product.discountedPrice !== null ? item.product.discountedPrice : item.product.price,
       quantity: item.quantity,
       image: item.product.image || '/api/placeholder/64/64',
       category: item.product.category,

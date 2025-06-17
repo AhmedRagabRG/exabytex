@@ -35,6 +35,8 @@ interface Product {
     name: string;
     email: string;
   };
+  emailSubject?: string;
+  emailContent?: string;
 }
 
 interface Category {
@@ -55,6 +57,9 @@ interface ProductFormData {
   category: string;
   features: string[];
   isPopular: boolean;
+  emailSubject?: string;
+  emailContent?: string;
+  downloadUrl?: string;
 }
 
 const ProductManagement = () => {
@@ -75,7 +80,10 @@ const ProductManagement = () => {
     image: '',
     category: '',
     features: [],
-    isPopular: false
+    isPopular: false,
+    emailSubject: '',
+    emailContent: '',
+    downloadUrl: ''
   });
 
   // جلب المنتجات
@@ -83,22 +91,35 @@ const ProductManagement = () => {
     try {
       setLoading(true);
       const response = await fetch('/api/products');
-      if (response.ok) {
-        const contentType = response.headers.get("content-type")
-        if (contentType && contentType.indexOf("application/json") !== -1) {
-          const data = await response.json();
-          setProducts(data);
-        } else {
-          console.error('Products API response is not JSON:', await response.text())
-          toast.error('خطأ في تحميل المنتجات');
-        }
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || errorData.details || response.statusText);
+      }
+      
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.indexOf("application/json") !== -1) {
+        const data = await response.json();
+        console.log('Fetched products:', data);
+        
+        // معالجة البيانات المستلمة
+        const processedProducts = data.map((product: Product) => ({
+          ...product,
+          features: Array.isArray(product.features) 
+            ? product.features 
+            : typeof product.features === 'string'
+              ? JSON.parse(product.features || '[]')
+              : []
+        }));
+        
+        setProducts(processedProducts);
       } else {
-        console.error('Error fetching products:', response.status, response.statusText);
-        toast.error('فشل في تحميل المنتجات');
+        console.error('Products API response is not JSON:', await response.text());
+        toast.error('خطأ في تنسيق البيانات المستلمة');
       }
     } catch (error) {
       console.error('Error fetching products:', error);
-      toast.error('خطأ في الاتصال بالخادم');
+      toast.error(error instanceof Error ? error.message : 'خطأ في الاتصال بالخادم');
     } finally {
       setLoading(false);
     }
@@ -166,34 +187,63 @@ const ProductManagement = () => {
     e.preventDefault();
     
     try {
+      // التحقق من البيانات المطلوبة
+      if (!formData.title || !formData.description || !formData.price || !formData.category) {
+        toast.error('يرجى ملء جميع الحقول المطلوبة');
+        return;
+      }
+
+      // تجهيز البيانات للإرسال
+      const processedData = {
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        price: parseFloat(formData.price) || 0,
+        discountedPrice: formData.discountedPrice ? parseFloat(formData.discountedPrice) : null,
+        hasDiscount: Boolean(formData.hasDiscount && formData.discountedPrice),
+        image: formData.image?.trim() || null,
+        category: formData.category.trim(),
+        features: formData.features || [],
+        isPopular: Boolean(formData.isPopular),
+        isActive: true,
+        emailSubject: formData.emailSubject?.trim() || null,
+        emailContent: formData.emailContent?.trim() || null,
+        downloadUrl: formData.downloadUrl?.trim() || null
+      };
+
+      console.log('Submitting form data:', processedData);
+
       const url = editingProduct 
         ? `/api/products/${editingProduct.id}` 
         : '/api/products';
       
       const method = editingProduct ? 'PUT' : 'POST';
       
+      console.log('Making API request:', { url, method });
+      
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(formData)
+        credentials: 'include',
+        body: JSON.stringify(processedData)
       });
-      
-      if (response.ok) {
-        await response.json();
-        await fetchProducts();
-        await fetchCategories(); // تحديث الفئات أيضاً
-        resetForm();
-        toast.success(editingProduct ? 'تم تحديث المنتج بنجاح!' : 'تم إضافة المنتج بنجاح!');
-      } else {
-        const error = await response.json();
-        console.error('API Error:', error);
-        toast.error(error.error || 'حدث خطأ');
+
+      console.log('API Response status:', response.status);
+      const responseData = await response.json();
+      console.log('API Response data:', responseData);
+
+      if (!response.ok) {
+        throw new Error(responseData.error || responseData.details || 'Failed to save product');
       }
+
+      await fetchProducts();
+      await fetchCategories();
+      resetForm();
+      toast.success(editingProduct ? 'تم تحديث المنتج بنجاح!' : 'تم إضافة المنتج بنجاح!');
     } catch (error) {
       console.error('Error saving product:', error);
-      toast.error('حدث خطأ في الحفظ');
+      toast.error(error instanceof Error ? error.message : 'حدث خطأ في حفظ المنتج');
     }
   };
 
@@ -208,7 +258,10 @@ const ProductManagement = () => {
       image: '',
       category: '',
       features: [],
-      isPopular: false
+      isPopular: false,
+      emailSubject: '',
+      emailContent: '',
+      downloadUrl: ''
     });
     setNewFeature('');
     setShowForm(false);
@@ -218,15 +271,18 @@ const ProductManagement = () => {
   // تحرير منتج
   const editProduct = (product: Product) => {
     setFormData({
-      title: product.title,
-      description: product.description,
-      price: product.price.toString(),
+      title: product.title || '',
+      description: product.description || '',
+      price: product.price?.toString() || '',
       discountedPrice: product.discountedPrice?.toString() || '',
-      hasDiscount: product.hasDiscount,
+      hasDiscount: Boolean(product.hasDiscount),
       image: product.image || '',
-      category: product.category,
-      features: product.features,
-      isPopular: product.isPopular
+      category: product.category || '',
+      features: Array.isArray(product.features) ? product.features : [],
+      isPopular: Boolean(product.isPopular),
+      emailSubject: product.emailSubject || '',
+      emailContent: product.emailContent || '',
+      downloadUrl: product.downloadUrl || ''
     });
     setEditingProduct(product);
     setShowForm(true);
@@ -601,6 +657,67 @@ const ProductManagement = () => {
                       </button>
                     </span>
                   ))}
+                </div>
+              </div>
+
+              {/* Email and Download Section */}
+              <div className="border-t pt-6 mt-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">إعدادات التسليم</h3>
+                
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      عنوان البريد الإلكتروني
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.emailSubject}
+                      onChange={(e) => setFormData({...formData, emailSubject: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="عنوان الرسالة التي سيتم إرسالها للعميل"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      محتوى البريد الإلكتروني
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={formData.emailContent}
+                      onChange={(e) => setFormData({...formData, emailContent: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="محتوى الرسالة التي سيتم إرسالها للعميل"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      رابط التحميل
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="url"
+                        value={formData.downloadUrl}
+                        onChange={(e) => setFormData({...formData, downloadUrl: e.target.value})}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="https://example.com/download/file.zip"
+                      />
+                      {formData.downloadUrl && (
+                        <a
+                          href={formData.downloadUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                        >
+                          اختبار
+                        </a>
+                      )}
+                    </div>
+                    <p className="mt-1 text-sm text-gray-500">
+                      أدخل رابط التحميل المباشر للمنتج. سيظهر هذا الرابط للعميل بعد الدفع.
+                    </p>
+                  </div>
                 </div>
               </div>
 

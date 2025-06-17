@@ -118,14 +118,36 @@ export const authOptions = {
       return token
     },
     async session({ session, token }: any) {
-      console.log('📝 Session callback - Session:', !!session, 'Token:', !!token)
+      console.log('📝 Session callback - Session:', {
+        email: session?.user?.email,
+        role: token?.role
+      });
+      
+      if (!session?.user) {
+        console.log('⚠️ No user in session');
+        return session;
+      }
+
+      // تحديث معلومات المستخدم من قاعدة البيانات
+      const user = await prisma.user.findUnique({
+        where: { email: session.user.email! },
+        select: { id: true, role: true, image: true }
+      });
+
+      console.log('📝 User from database:', user);
+
+      if (!user) {
+        console.log('⚠️ User not found in database');
+        return session;
+      }
+
       return {
         ...session,
         user: {
           ...session.user,
-          id: token.id as string,
-          role: token.role as string,
-          image: token.image as string,
+          id: user.id,
+          role: user.role,
+          image: user.image || session.user.image,
         }
       }
     }

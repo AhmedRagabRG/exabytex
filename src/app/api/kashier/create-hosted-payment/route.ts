@@ -100,6 +100,24 @@ export async function POST(request: NextRequest) {
 
     const orderId = generateOrderId();
     const originalAmount = parseFloat(orderData.totals.total.toFixed(2));
+
+    // إذا كان المبلغ صفر (منتج مجاني)
+    if (originalAmount === 0) {
+      // إنشاء رابط نجاح مباشر
+      const successUrl = new URL('/payment/success', getBaseUrl());
+      successUrl.searchParams.set('status', 'success');
+      successUrl.searchParams.set('order_id', orderId);
+      successUrl.searchParams.set('amount', '0');
+      successUrl.searchParams.set('currency', 'EGP');
+      successUrl.searchParams.set('is_free', 'true');
+      
+      return NextResponse.json({
+        success: true,
+        orderId: orderId,
+        paymentUrl: successUrl.toString(),
+        isFreeProduct: true
+      });
+    }
     
     // تحويل المبلغ للجنيه المصري للكاشير
     const currencyConversion = await getAmountForKashier(originalAmount);

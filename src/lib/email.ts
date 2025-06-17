@@ -105,4 +105,47 @@ export async function sendPasswordResetEmail(email: string, token: string) {
       </div>
     `,
   })
+}
+
+// إرسال بريد إلكتروني لشراء المنتج
+export async function sendProductPurchaseEmail({
+  email,
+  productName,
+  orderId,
+  downloadUrl,
+  customSubject,
+  customContent,
+}: {
+  email: string
+  productName: string
+  orderId: string
+  downloadUrl: string
+  customSubject?: string
+  customContent?: string
+}) {
+  const subject = customSubject || `تم شراء ${productName} بنجاح`;
+  const content = customContent || `
+    <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #333;">شكراً لشرائك ${productName}</h2>
+      <p>مرحباً،</p>
+      <p>شكراً لشرائك ${productName}. يمكنك تحميل المنتج من خلال الرابط أدناه:</p>
+      <p>
+        <a href="${downloadUrl}" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">
+          تحميل المنتج
+        </a>
+      </p>
+      <p>رقم الطلب: ${orderId}</p>
+      <hr style="border: 1px solid #eee; margin: 20px 0;">
+      <p style="color: #666; font-size: 12px;">
+        إذا لم تتمكن من النقر على الزر، يمكنك نسخ ولصق الرابط التالي في متصفحك:<br>
+        ${downloadUrl}
+      </p>
+    </div>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject,
+    html: content,
+  });
 } 
