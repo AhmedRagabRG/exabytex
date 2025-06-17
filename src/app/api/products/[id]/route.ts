@@ -46,22 +46,46 @@ export async function PUT(req: Request, { params }: RouteParams) {
     }
 
     const body = await req.json()
-    const { name, description, price, image, emailSubject, emailContent } = body
+    const { 
+      title, 
+      description, 
+      price, 
+      image, 
+      emailSubject, 
+      emailContent,
+      downloadUrl,
+      category,
+      hasDiscount,
+      discountedPrice,
+      features,
+      isActive,
+      isPopular
+    } = body
+
+    console.log('Updating product with data:', body)
 
     const product = await prisma.product.update({
       where: {
         id: params.id,
       },
       data: {
-        name,
+        title,
         description,
-        price,
+        price: typeof price === 'number' ? price : parseFloat(price),
         image,
         emailSubject,
         emailContent,
+        downloadUrl,
+        category,
+        hasDiscount: hasDiscount || false,
+        discountedPrice: discountedPrice ? parseFloat(discountedPrice) : null,
+        features: features || '[]',
+        isActive: isActive ?? true,
+        isPopular: isPopular || false
       },
     })
 
+    console.log('Product updated successfully:', product)
     return NextResponse.json(product)
   } catch (error) {
     console.error('Error updating product:', error)

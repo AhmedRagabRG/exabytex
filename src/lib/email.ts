@@ -65,11 +65,12 @@ export async function sendEmail({
     let errorMessage = 'حدث خطأ أثناء إرسال البريد الإلكتروني'
     
     if (error instanceof Error) {
-      if (error.code === 'ETIMEDOUT') {
+      const nodeError = error as NodeJS.ErrnoException;
+      if (nodeError.code === 'ETIMEDOUT') {
         errorMessage = 'انتهت مهلة الاتصال بخادم البريد الإلكتروني'
-      } else if (error.code === 'ECONNREFUSED') {
+      } else if (nodeError.code === 'ECONNREFUSED') {
         errorMessage = 'تم رفض الاتصال بخادم البريد الإلكتروني'
-      } else if (error.code === 'EAUTH') {
+      } else if (nodeError.code === 'EAUTH') {
         errorMessage = 'فشل المصادقة مع خادم البريد الإلكتروني'
       }
     }
@@ -115,6 +116,7 @@ export async function sendProductPurchaseEmail({
   downloadUrl,
   customSubject,
   customContent,
+  transactionId
 }: {
   email: string
   productName: string
@@ -122,24 +124,44 @@ export async function sendProductPurchaseEmail({
   downloadUrl: string
   customSubject?: string
   customContent?: string
+  transactionId?: string
 }) {
   const subject = customSubject || `تم شراء ${productName} بنجاح`;
   const content = customContent || `
-    <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #333;">شكراً لشرائك ${productName}</h2>
-      <p>مرحباً،</p>
-      <p>شكراً لشرائك ${productName}. يمكنك تحميل المنتج من خلال الرابط أدناه:</p>
-      <p>
-        <a href="${downloadUrl}" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">
-          تحميل المنتج
-        </a>
-      </p>
-      <p>رقم الطلب: ${orderId}</p>
-      <hr style="border: 1px solid #eee; margin: 20px 0;">
-      <p style="color: #666; font-size: 12px;">
-        إذا لم تتمكن من النقر على الزر، يمكنك نسخ ولصق الرابط التالي في متصفحك:<br>
-        ${downloadUrl}
-      </p>
+    <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+      <div style="background-color: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <h2 style="color: #333; margin-bottom: 20px;">شكراً لشرائك ${productName}</h2>
+        
+        <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+          <p style="margin: 5px 0;"><strong>رقم الطلب:</strong> ${orderId}</p>
+          ${transactionId ? `<p style="margin: 5px 0;"><strong>رقم العملية:</strong> ${transactionId}</p>` : ''}
+          <p style="margin: 5px 0;"><strong>المنتج:</strong> ${productName}</p>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <p>يمكنك تحميل المنتج من خلال الزر أدناه:</p>
+          <a href="${downloadUrl}" 
+             style="display: inline-block; padding: 12px 24px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; margin-top: 10px;">
+            تحميل المنتج
+          </a>
+        </div>
+
+        <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px;">
+          <p style="color: #666; font-size: 14px;">
+            يمكنك أيضاً الوصول إلى منتجاتك في أي وقت من خلال 
+            <a href="${process.env.NEXT_PUBLIC_SITE_URL}/dashboard" style="color: #007bff; text-decoration: none;">
+              لوحة التحكم
+            </a>
+          </p>
+        </div>
+
+        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
+          <p style="color: #666; font-size: 12px;">
+            إذا لم تتمكن من النقر على الزر، يمكنك نسخ ولصق الرابط التالي في متصفحك:<br>
+            ${downloadUrl}
+          </p>
+        </div>
+      </div>
     </div>
   `;
 

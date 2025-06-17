@@ -13,10 +13,12 @@ import {
   Eye,
   Filter,
   Search,
-  RefreshCw
+  RefreshCw,
+  Download
 } from 'lucide-react'
 import { toast } from 'sonner'
 import Image from 'next/image'
+import { useSession } from 'next-auth/react'
 
 interface Order {
   id: string
@@ -35,6 +37,8 @@ interface Order {
       title: string
       image: string | null
       price: number
+      description: string
+      downloadUrl: string | null
     }
   }>
   promoCode?: {
@@ -49,6 +53,7 @@ interface OrdersTabProps {
 }
 
 export default function OrdersTab({ onGoToProducts }: OrdersTabProps) {
+  const { data: session } = useSession()
   const [orders, setOrders] = useState<Order[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -75,8 +80,10 @@ export default function OrdersTab({ onGoToProducts }: OrdersTabProps) {
   }
 
   useEffect(() => {
-    fetchOrders()
-  }, [])
+    if (session?.user) {
+      fetchOrders()
+    }
+  }, [session])
 
   const filteredOrders = orders.filter(order => {
     const matchesSearch = order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
