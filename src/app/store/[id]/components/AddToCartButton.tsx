@@ -9,9 +9,18 @@ import { useRouter } from 'next/navigation'
 interface AddToCartButtonProps {
   productId: string
   productTitle: string
+  price: number
+  discountedPrice?: number
+  hasDiscount?: boolean
 }
 
-export function AddToCartButton({ productId, productTitle }: AddToCartButtonProps) {
+export function AddToCartButton({ 
+  productId, 
+  productTitle,
+  price,
+  discountedPrice,
+  hasDiscount 
+}: AddToCartButtonProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [isAdded, setIsAdded] = useState(false)
   const { data: session } = useSession()
@@ -32,7 +41,10 @@ export function AddToCartButton({ productId, productTitle }: AddToCartButtonProp
         },
         body: JSON.stringify({
           productId,
-          quantity: 1
+          quantity: 1,
+          price,
+          discountedPrice,
+          hasDiscount
         }),
       })
 

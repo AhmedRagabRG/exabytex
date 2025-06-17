@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { CreditCard, User, Phone, Loader2, ShoppingBag } from 'lucide-react';
 import { useCart } from '@/components/providers/cart-provider';
 import { useSession } from 'next-auth/react';
+import { useCartStore } from '@/store/cartStore';
 
 import { PriceDisplay, SimplePrice } from '@/components/ui/PriceDisplay'
 import { CurrencyConverter } from '@/components/ui/CurrencyConverter'
@@ -28,6 +29,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const { items, isLoading: cartLoading } = useCart();
+  const { appliedPromo } = useCartStore();
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [currencyConversion, setCurrencyConversion] = useState<{
@@ -52,40 +54,22 @@ export default function CheckoutPage() {
     paymentMethod: 'card'
   });
 
+  // حساب السعر الصحيح للمنتج (مع أو بدون خصم)
+  const getProductPrice = (item: any) => {
+    return (item.hasDiscount && item.discountedPrice) 
+      ? item.discountedPrice 
+      : item.price;
+  };
+
   const calculateSubtotal = () => {
     return items.reduce((total, item) => {
-      // استخدام السعر المخفض إذا كان متاحاً
-      const itemPrice = item.hasDiscount && item.discountedPrice !== undefined ? item.discountedPrice : item.price;
-      return total + (itemPrice * item.quantity);
+      return total + (getProductPrice(item) * item.quantity);
     }, 0);
   };
 
   const subtotal = calculateSubtotal();
-  const totalAmount = subtotal;
-
-  // تجهيز بيانات الطلب
-  const orderData = {
-    items: items.map(item => ({
-      id: item.productId,
-      name: item.name,
-      price: item.hasDiscount && item.discountedPrice !== undefined ? item.discountedPrice : item.price,
-      originalPrice: item.price,
-      quantity: item.quantity,
-      image: item.image || ''
-    })),
-    customer: {
-      ...formData,
-      phone: `${formData.phoneCountry.phoneCode}${formData.phone}`,
-      country: formData.phoneCountry.nameAr,
-      countryCode: formData.phoneCountry.code
-    },
-    totals: {
-      subtotal,
-      deliveryFee: 0,
-      total: totalAmount
-    },
-    paymentMethod: formData.paymentMethod
-  };
+  const discountAmount = appliedPromo?.discountAmount || 0;
+  const totalAmount = appliedPromo ? appliedPromo.finalTotal : subtotal;
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -207,34 +191,35 @@ export default function CheckoutPage() {
     setIsLoading(true);
 
     try {
+      const orderData = {
+        items: items.map(item => ({
+          id: item.id,
+          name: item.name,
+          price: getProductPrice(item),
+          originalPrice: item.price,
+          quantity: item.quantity,
+          image: item.image || ''
+        })),
+        customer: {
+          ...formData,
+          phone: `${formData.phoneCountry.phoneCode}${formData.phone}`,
+          country: formData.phoneCountry.nameAr,
+          countryCode: formData.phoneCountry.code
+        },
+        totals: {
+          subtotal,
+          discount: discountAmount,
+          total: totalAmount
+        },
+        paymentMethod: formData.paymentMethod,
+        promoCode: appliedPromo?.promoCode || null
+      };
+
       if (process.env.NODE_ENV === 'development') {
         console.log('Sending order data:', orderData);
       }
 
-      // إذا كان المجموع 0، إنشاء طلب مجاني مباشرة
-      if (totalAmount === 0) {
-        const response = await fetch('/api/orders/create', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...orderData, isFree: true })
-        });
-
-        const result = await response.json();
-        
-        if (response.ok) {
-          // في بيئة التطوير، استخدم localhost
-          const baseUrl = process.env.NODE_ENV === 'development' 
-            ? window.location.origin 
-            : 'https://exabytex.com';
-            
-          window.location.href = `${baseUrl}/order-confirmation/${result.orderId}`;
-          return;
-        } else {
-          throw new Error(result.error || 'Failed to create free order');
-        }
-      }
-
-      // Handle different payment methods for paid orders
+      // Handle different payment methods
       if (formData.paymentMethod === 'card') {
         // Kashier Legacy Payment UI
         const paymentResponse = await fetch('/api/kashier/create-hosted-payment', {
@@ -256,19 +241,11 @@ export default function CheckoutPage() {
             // عرض معلومات التحويل قبل التوجه للدفع
             setTimeout(() => {
               localStorage.setItem('pendingOrderId', result.orderId);
-              // في بيئة التطوير، تأكد من استخدام localhost
-              const paymentUrl = process.env.NODE_ENV === 'development'
-                ? result.paymentUrl.replace('https://exabytex.com', window.location.origin)
-                : result.paymentUrl;
-              window.location.href = paymentUrl;
+              window.location.href = result.paymentUrl;
             }, 3000);
           } else {
             localStorage.setItem('pendingOrderId', result.orderId);
-            // في بيئة التطوير، تأكد من استخدام localhost
-            const paymentUrl = process.env.NODE_ENV === 'development'
-              ? result.paymentUrl.replace('https://exabytex.com', window.location.origin)
-              : result.paymentUrl;
-            window.location.href = paymentUrl;
+            window.location.href = result.paymentUrl;
           }
         } else {
           alert(`خطأ في إنشاء صفحة الدفع: ${result.error || 'حدث خطأ غير معروف'}`);
@@ -285,9 +262,6 @@ export default function CheckoutPage() {
       setIsLoading(false);
     }
   };
-
-  // إخفاء خيارات الدفع للمنتجات المجانية
-  const showPaymentMethods = totalAmount > 0;
 
   // Handle PayPal payment success
   const handlePayPalSuccess = (details: unknown) => {
@@ -480,205 +454,307 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {totalAmount > 0 && (
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    <CreditCard className="h-5 w-5 ml-2" />
-                    طريقة الدفع
-                  </h3>
-                  
-                  <div className="space-y-3">
-                    {/* Kashier Card Payment */}
-                    <div 
-                      className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                        formData.paymentMethod === 'card' 
-                          ? 'border-blue-500 bg-blue-50' 
-                          : 'border-gray-200 bg-white hover:border-blue-300'
-                      }`}
-                      onClick={() => handlePaymentMethodChange('card')}
-                    >
-                      <div className="flex items-center">
-                        <input
-                          type="radio"
-                          name="paymentMethod"
-                          value="card"
-                          checked={formData.paymentMethod === 'card'}
-                          onChange={handleInputChange}
-                          className="ml-3 text-blue-600"
-                        />
-                        <CreditCard className="h-5 w-5 text-blue-600 ml-2" />
-                        <span className="font-medium">البطاقة الائتمانية (واجهة كاشير التقليدية)</span>
-                      </div>
-                      <p className="text-sm text-blue-700 mt-1 mr-10">
-                        Visa, Mastercard - واجهة دفع تقليدية مألوفة ومجربة
-                      </p>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <CreditCard className="h-5 w-5 ml-2" />
+                  طريقة الدفع
+                </h3>
+                
+                <div className="space-y-3">
+                  {/* Kashier Card Payment */}
+                  <div 
+                    className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                      formData.paymentMethod === 'card' 
+                        ? 'border-blue-500 bg-blue-50' 
+                        : 'border-gray-200 bg-white hover:border-blue-300'
+                    }`}
+                    onClick={() => handlePaymentMethodChange('card')}
+                  >
+                    <div className="flex items-center">
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="card"
+                        checked={formData.paymentMethod === 'card'}
+                        onChange={handleInputChange}
+                        className="ml-3 text-blue-600"
+                      />
+                      <CreditCard className="h-5 w-5 text-blue-600 ml-2" />
+                      <span className="font-medium">البطاقة الائتمانية (واجهة كاشير التقليدية)</span>
                     </div>
-
-                    {/* PayPal Payment */}
-                    <div 
-                      className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                        formData.paymentMethod === 'paypal' 
-                          ? 'border-blue-500 bg-blue-50' 
-                          : 'border-gray-200 bg-white hover:border-blue-300'
-                      }`}
-                      onClick={() => handlePaymentMethodChange('paypal')}
-                    >
-                      <div className="flex items-center">
-                        <input
-                          type="radio"
-                          name="paymentMethod"
-                          value="paypal"
-                          checked={formData.paymentMethod === 'paypal'}
-                          onChange={handleInputChange}
-                          className="ml-3 text-blue-600"
-                        />
-                        <svg className="h-5 w-5 ml-2" viewBox="0 0 24 24" fill="#003087">
-                          <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106zm14.146-14.42a3.35 3.35 0 0 0-.098-.24c-.543-1.24-1.51-2.053-2.8-2.35a8.006 8.006 0 0 0-1.92-.22H9.232c-.524 0-.967.38-1.05.9L7.076 8.96c-.083.52.263.96.787.96h2.19c4.298 0 7.664-1.747 8.647-6.797.03-.15.053-.294.077-.437z"/>
-                        </svg>
-                        <span className="font-medium">PayPal</span>
-                      </div>
-                      <p className="text-sm text-gray-600 mt-1 mr-10">
-                        ادفع بأمان عبر PayPal
-                      </p>
-                    </div>
-
-                    {/* Apple Pay Payment */}
-                    <div 
-                      className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                        formData.paymentMethod === 'apple_pay' 
-                          ? 'border-black bg-gray-50' 
-                          : 'border-gray-200 bg-white hover:border-gray-400'
-                      }`}
-                      onClick={() => handlePaymentMethodChange('apple_pay')}
-                    >
-                      <div className="flex items-center">
-                        <input
-                          type="radio"
-                          name="paymentMethod"
-                          value="apple_pay"
-                          checked={formData.paymentMethod === 'apple_pay'}
-                          onChange={handleInputChange}
-                          className="ml-3 text-gray-600"
-                        />
-                        <svg className="h-5 w-5 ml-2" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M18.71 19.5C17.16 20.38 15.58 20.8 14.28 20.8C12.98 20.8 11.4 20.38 9.85 19.5C8.3 18.62 6.75 17.74 5.2 17.74C3.65 17.74 2.1 18.62 0.55 19.5V17.74C2.1 16.86 3.65 16.44 5.2 16.44C6.75 16.44 8.3 16.86 9.85 17.74C11.4 18.62 12.98 19.04 14.28 19.04C15.58 19.04 17.16 18.62 18.71 17.74V19.5Z"/>
-                        </svg>
-                        <span className="font-medium">Apple Pay (كاشير)</span>
-                      </div>
-                      <p className="text-sm text-gray-600 mt-1 mr-10">
-                        دفع سريع وآمن عبر Apple Pay
-                      </p>
-                    </div>
+                    <p className="text-sm text-blue-700 mt-1 mr-10">
+                      Visa, Mastercard - واجهة دفع تقليدية مألوفة ومجربة
+                    </p>
                   </div>
 
-                  <p className="text-xs text-gray-600 mt-3">
-                    المنتجات الرقمية تتطلب الدفع الفوري
-                  </p>
+                  {/* PayPal Payment */}
+                  <div 
+                    className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                      formData.paymentMethod === 'paypal' 
+                        ? 'border-blue-500 bg-blue-50' 
+                        : 'border-gray-200 bg-white hover:border-blue-300'
+                    }`}
+                    onClick={() => handlePaymentMethodChange('paypal')}
+                  >
+                    <div className="flex items-center">
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="paypal"
+                        checked={formData.paymentMethod === 'paypal'}
+                        onChange={handleInputChange}
+                        className="ml-3 text-blue-600"
+                      />
+                      <svg className="h-5 w-5 ml-2" viewBox="0 0 24 24" fill="#003087">
+                        <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106zm14.146-14.42a3.35 3.35 0 0 0-.098-.24c-.543-1.24-1.51-2.053-2.8-2.35a8.006 8.006 0 0 0-1.92-.22H9.232c-.524 0-.967.38-1.05.9L7.076 8.96c-.083.52.263.96.787.96h2.19c4.298 0 7.664-1.747 8.647-6.797.03-.15.053-.294.077-.437z"/>
+                      </svg>
+                      <span className="font-medium">PayPal</span>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1 mr-10">
+                      ادفع بأمان عبر PayPal
+                    </p>
+                  </div>
+
+                  {/* Apple Pay Payment */}
+                  <div 
+                    className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                      formData.paymentMethod === 'apple_pay' 
+                        ? 'border-black bg-gray-50' 
+                        : 'border-gray-200 bg-white hover:border-gray-400'
+                    }`}
+                    onClick={() => handlePaymentMethodChange('apple_pay')}
+                  >
+                    <div className="flex items-center">
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="apple_pay"
+                        checked={formData.paymentMethod === 'apple_pay'}
+                        onChange={handleInputChange}
+                        className="ml-3 text-gray-600"
+                      />
+                      <svg className="h-5 w-5 ml-2" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M18.71 19.5C17.16 20.38 15.58 20.8 14.28 20.8C12.98 20.8 11.4 20.38 9.85 19.5C8.3 18.62 6.75 17.74 5.2 17.74C3.65 17.74 2.1 18.62 0.55 19.5V17.74C2.1 16.86 3.65 16.44 5.2 16.44C6.75 16.44 8.3 16.86 9.85 17.74C11.4 18.62 12.98 19.04 14.28 19.04C15.58 19.04 17.16 18.62 18.71 17.74V19.5Z"/>
+                      </svg>
+                      <span className="font-medium">Apple Pay (كاشير)</span>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1 mr-10">
+                      دفع سريع وآمن عبر Apple Pay
+                    </p>
+                  </div>
                 </div>
+
+                <p className="text-xs text-gray-600 mt-3">
+                  المنتجات الرقمية تتطلب الدفع الفوري
+                </p>
+              </div>
+
+              {/* <div className="bg-blue-50 p-4 rounded-lg">
+                <h4 className="text-sm font-medium text-blue-900 mb-2">ملاحظات مهمة:</h4>
+                <ul className="text-xs text-blue-800 space-y-1">
+                  <li>• ستحصل على المنتجات فوراً بعد إتمام الدفع</li>
+                  <li>• سيتم إرسال روابط التحميل على بريدك الإلكتروني</li>
+                  <li>• خدمة دعم فني 24/7 لمساعدتك</li>
+                  <li>• ضمان استرداد لمدة 30 يوم</li>
+                </ul>
+              </div> */}
+
+
+
+              {/* Payment Buttons Based on Selected Method */}
+              {formData.paymentMethod === 'card' && (
+                <button
+                  type="submit"
+                  disabled={isLoading || !isFormValid}
+                  className={`w-full py-3 px-4 rounded-lg font-semibold focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
+                    isFormValid 
+                      ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                      : 'bg-gray-300 text-gray-500'
+                  }`}
+                >
+                  {isLoading ? (
+                    <div className="flex items-center justify-center">
+                      <Loader2 className="animate-spin h-5 w-5 ml-2" />
+                      {currencyConversion ? 'جاري التحويل لكاشير...' : 'جاري الاتصال بكاشير...'}
+                    </div>
+                  ) : !isFormValid ? (
+                    <div className="flex items-center justify-center">
+                      يرجى ملء جميع البيانات المطلوبة
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center">
+                      إتمام الدفع بالبطاقة - <SimplePrice amount={totalAmount} className="text-white" />
+                    </div>
+                  )}
+                </button>
               )}
 
-              <button
-                type="submit"
-                disabled={!isFormValid || isLoading}
-                className={`w-full flex items-center justify-center py-3 px-4 rounded-lg text-white font-medium ${
-                  isFormValid && !isLoading
-                    ? 'bg-blue-600 hover:bg-blue-700'
-                    : 'bg-gray-400 cursor-not-allowed'
-                }`}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="animate-spin h-5 w-5 ml-2" />
-                    جاري المعالجة...
-                  </>
-                ) : totalAmount === 0 ? (
-                  <>
-                    <ShoppingBag className="h-5 w-5 ml-2" />
-                    تأكيد الطلب والحصول على المنتج
-                  </>
-                ) : (
-                  <>
-                    <CreditCard className="h-5 w-5 ml-2" />
-                    متابعة للدفع
-                  </>
-                )}
-              </button>
-            </form>
-          </div>
-
-          <div>
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-6">ملخص الطلب</h3>
-              
-              <div className="space-y-4 mb-6">
-                {items.map((item) => (
-                  <div key={item.id} className="flex items-center space-x-4 rtl:space-x-reverse">
-                    <div className="flex-shrink-0">
-                      <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
-                        {item.image ? (
-                          <Image
-                            src={item.image}
-                            alt={item.name}
-                            width={64}
-                            height={64}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <ShoppingBag className="h-8 w-8 text-gray-400" />
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-medium text-gray-900 truncate">
-                        {item.name}
-                      </h4>
-                      <p className="text-sm text-gray-500">الكمية: {item.quantity}</p>
-                      <div className="flex items-center gap-2">
-                        <SimplePrice amount={item.price} className="text-gray-900" />
-                        <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">
-                          منتج رقمي
-                        </span>
-                      </div>
-                    </div>
-                    <div className="text-sm font-medium text-gray-900">
-                      <SimplePrice amount={item.price * item.quantity} className="text-gray-900" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="border-t border-gray-200 pt-4 space-y-2">
-                <div className="flex justify-between text-sm dir-rtl">
-                  <span>المجموع الفرعي:</span>
-                  <SimplePrice amount={subtotal} className="text-gray-900" />
-                </div>
-                <div className="flex justify-between text-sm dir-rtl">
-                  <span>رسوم الشحن:</span>
-                  <span className="text-green-600 font-medium">مجاني (منتجات رقمية)</span>
-                </div>
-                <div className="flex justify-between text-lg font-semibold border-t border-gray-200 pt-2 dir-rtl">
-                  <span>المجموع الكلي:</span>
-                  <PriceDisplay amount={totalAmount} size="md" className="text-blue-600" />
-                </div>
-              </div>
-
-              {/* معلومات تحويل العملة */}
-              {currencyConversion && currencyConversion.originalCurrency !== 'EGP' && (
-                <div className="mt-6">
-                  <CurrencyConverter
-                    originalAmount={currencyConversion.originalAmount}
-                    originalCurrency={currencyConversion.originalCurrency}
-                    convertedAmount={currencyConversion.kashierAmount}
-                    convertedCurrency={currencyConversion.kashierCurrency}
-                    exchangeRate={currencyConversion.exchangeRate}
-                    isLiveRate={currencyConversion.isLiveRate}
+              {formData.paymentMethod === 'paypal' && isFormValid && (
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-600 text-center">
+                    اضغط على زر PayPal للمتابعة
+                  </p>
+                  <PayPalButton
+                    amount={totalAmount}
+                    currency="USD"
+                    onSuccess={handlePayPalSuccess}
+                    onError={handlePayPalError}
+                    disabled={isLoading || !isFormValid}
                   />
                 </div>
               )}
+
+              {formData.paymentMethod === 'apple_pay' && isFormValid && (
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-600 text-center">
+                    اضغط على زر Apple Pay للمتابعة
+                  </p>
+                  <ApplePayButton
+                    amount={totalAmount}
+                    currency="EGP"
+                    onSuccess={handleApplePaySuccess}
+                    onError={handleApplePayError}
+                    orderData={{
+                      items: items.map(item => ({
+                        id: item.id,
+                        name: item.name,
+                        price: item.price,
+                        quantity: item.quantity
+                      })),
+                      customer: {
+                        ...formData,
+                        phone: `${formData.phoneCountry.phoneCode}${formData.phone}`,
+                        country: formData.phoneCountry.nameAr,
+                        countryCode: formData.phoneCountry.code
+                      },
+                      totals: {
+                        subtotal,
+                        total: totalAmount
+                      }
+                    }}
+                    disabled={isLoading || !isFormValid}
+                  />
+                </div>
+              )}
+
+              {!isFormValid && formData.paymentMethod !== 'card' && (
+                <div className="w-full bg-gray-300 text-gray-500 py-3 px-4 rounded-lg font-semibold text-center">
+                  يرجى ملء جميع البيانات المطلوبة
+                </div>
+              )}
+            </form>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-6">ملخص الطلب</h3>
+            
+            <div className="space-y-4 mb-6">
+              {items.map((item) => (
+                <div key={item.id} className="flex items-center space-x-4 rtl:space-x-reverse">
+                  <div className="flex-shrink-0">
+                    <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
+                      {item.image ? (
+                        <Image 
+                          src={item.image} 
+                          alt={item.name}
+                          width={64}
+                          height={64}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <ShoppingBag className="h-8 w-8 text-gray-400" />
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-sm font-medium text-gray-900 truncate">
+                      {item.name}
+                    </h4>
+                    <p className="text-sm text-gray-500">الكمية: {item.quantity}</p>
+                    <div className="flex items-center gap-2">
+                      <SimplePrice amount={getProductPrice(item)} className="text-gray-900" />
+                      <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">
+                        منتج رقمي
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-sm font-medium text-gray-900">
+                    <SimplePrice amount={getProductPrice(item) * item.quantity} className="text-gray-900" />
+                  </div>
+                </div>
+              ))}
             </div>
+
+            <div className="border-t border-gray-200 pt-4 space-y-2">
+              <div className="flex justify-between text-sm dir-rtl">
+                <span>المجموع الفرعي:</span>
+                <SimplePrice amount={subtotal} className="text-gray-900" />
+              </div>
+              {appliedPromo && (
+                <div className="flex justify-between text-sm dir-rtl">
+                  <span>خصم الكوبون:</span>
+                  <span className="text-green-600 font-medium">
+                    -<SimplePrice amount={discountAmount} className="text-green-600" />
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between text-sm dir-rtl">
+                <span>رسوم الشحن:</span>
+                <span className="text-green-600 font-medium">مجاني (منتجات رقمية)</span>
+              </div>
+              <div className="flex justify-between text-lg font-semibold border-t border-gray-200 pt-2 dir-rtl">
+                <span>المجموع الكلي:</span>
+                <PriceDisplay amount={totalAmount} size="md" className="text-blue-600" />
+              </div>
+            </div>
+
+            {/* معلومات تحويل العملة */}
+            {currencyConversion && currencyConversion.originalCurrency !== 'EGP' && (
+              <div className="mt-6">
+                <CurrencyConverter
+                  originalAmount={currencyConversion.originalAmount}
+                  originalCurrency={currencyConversion.originalCurrency}
+                  convertedAmount={currencyConversion.kashierAmount}
+                  convertedCurrency={currencyConversion.kashierCurrency}
+                  exchangeRate={currencyConversion.exchangeRate}
+                  isLiveRate={currencyConversion.isLiveRate}
+                />
+              </div>
+            )}
+
+            {/* <div className="mt-6 p-4 bg-green-50 rounded-lg">
+              <h4 className="text-sm font-medium text-green-900 mb-2">مميزات المنتجات الرقمية:</h4>
+              <ul className="text-xs text-green-800 space-y-1">
+                <li>• تحميل فوري بعد الدفع</li>
+                <li>• دعم فني مدى الحياة</li>
+                <li>• تحديثات مجانية</li>
+                <li>• ضمان الجودة 100%</li>
+              </ul>
+            </div> */}
           </div>
         </div>
       </div>
+
+      {/* Currency Conversion Modal */}
+      {currencyConversion && (
+        <CurrencyConversionModal
+          isOpen={showConversionModal}
+          onClose={() => setShowConversionModal(false)}
+          originalAmount={currencyConversion.originalAmount}
+          originalCurrency={currencyConversion.originalCurrency}
+          convertedAmount={currencyConversion.kashierAmount}
+          convertedCurrency={currencyConversion.kashierCurrency}
+          exchangeRate={currencyConversion.exchangeRate}
+          isLiveRate={currencyConversion.isLiveRate}
+        />
+      )}
+
+      {/* EGP Payment Modal */}
+      <EgpPaymentModal
+        isOpen={showEgpModal}
+        onClose={() => setShowEgpModal(false)}
+        amount={totalAmount}
+      />
     </div>
   );
 }

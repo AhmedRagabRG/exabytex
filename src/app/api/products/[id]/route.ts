@@ -15,11 +15,6 @@ interface RouteParams {
 // GET - جلب منتج واحد
 export async function GET(req: Request, { params }: RouteParams) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
-      return new NextResponse('Unauthorized', { status: 401 })
-    }
-
     const product = await prisma.product.findUnique({
       where: {
         id: params.id,
@@ -30,7 +25,13 @@ export async function GET(req: Request, { params }: RouteParams) {
       return new NextResponse('Product not found', { status: 404 })
     }
 
-    return NextResponse.json(product)
+    // Parse features from JSON string to array if needed
+    const parsedProduct = {
+      ...product,
+      features: typeof product.features === 'string' ? JSON.parse(product.features) : (product.features || [])
+    }
+
+    return NextResponse.json(parsedProduct)
   } catch (error) {
     console.error('Error fetching product:', error)
     return new NextResponse('Internal Server Error', { status: 500 })
@@ -64,6 +65,9 @@ export async function PUT(req: Request, { params }: RouteParams) {
 
     console.log('Updating product with data:', body)
 
+    // تحويل المصفوفة إلى سلسلة نصية JSON
+    const featuresString = Array.isArray(features) ? JSON.stringify(features) : features;
+
     const product = await prisma.product.update({
       where: {
         id: params.id,
@@ -79,7 +83,7 @@ export async function PUT(req: Request, { params }: RouteParams) {
         category,
         hasDiscount: hasDiscount || false,
         discountedPrice: discountedPrice ? parseFloat(discountedPrice) : null,
-        features: features || '[]',
+        features: featuresString,
         isActive: isActive ?? true,
         isPopular: isPopular || false
       },

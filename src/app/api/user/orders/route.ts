@@ -31,8 +31,13 @@ export async function GET() {
               select: {
                 id: true,
                 title: true,
+                description: true,
                 image: true,
-                price: true
+                price: true,
+                downloadUrl: true,
+                emailSubject: true,
+                emailContent: true,
+                category: true
               }
             }
           }
@@ -60,7 +65,11 @@ export async function GET() {
         id: item.id,
         quantity: item.quantity,
         price: item.price,
-        product: item.product
+        product: {
+          ...item.product,
+          // تأكد من أن downloadUrl متاح فقط للطلبات المكتملة
+          downloadUrl: order.status === 'COMPLETED' ? item.product.downloadUrl : null
+        }
       })),
       promoCode: order.promoCode
     }))

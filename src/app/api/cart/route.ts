@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     // التحقق من نوع الطلب: إضافة منتج واحد أم مزامنة السلة
     if (body.productId && body.quantity !== undefined) {
       // إضافة منتج واحد للسلة
-      const { productId, quantity = 1 } = body;
+      const { productId, quantity = 1, price, discountedPrice, hasDiscount } = body;
 
       const user = await prisma.user.findUnique({
         where: { email: session.user.email }
@@ -87,10 +87,15 @@ export async function POST(request: NextRequest) {
       });
 
       if (existingCartItem) {
-        // تحديث الكمية
+        // تحديث الكمية والسعر
         const updatedCartItem = await prisma.cartItem.update({
           where: { id: existingCartItem.id },
-          data: { quantity: existingCartItem.quantity + quantity },
+          data: { 
+            quantity: existingCartItem.quantity + quantity,
+            price: price,
+            discountedPrice: discountedPrice,
+            hasDiscount: hasDiscount
+          },
           include: { product: true }
         });
 
@@ -101,7 +106,10 @@ export async function POST(request: NextRequest) {
           data: {
             userId: user.id,
             productId: productId,
-            quantity: quantity
+            quantity: quantity,
+            price: price,
+            discountedPrice: discountedPrice,
+            hasDiscount: hasDiscount
           },
           include: { product: true }
         });

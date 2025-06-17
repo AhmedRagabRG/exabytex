@@ -230,7 +230,7 @@ export default function OrdersTab({ onGoToProducts }: OrdersTabProps) {
           </div>
 
           {/* Quick Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div className="bg-blue-50 p-4 rounded-lg">
               <div className="text-blue-600 text-sm font-medium">إجمالي الطلبات</div>
               <div className="text-2xl font-bold text-blue-900">{orders.length}</div>
@@ -278,7 +278,7 @@ export default function OrdersTab({ onGoToProducts }: OrdersTabProps) {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="flex items-center gap-4">
                   <div className="text-sm text-gray-600">
                     <span className="font-medium">{order.itemsCount}</span> عنصر
@@ -308,9 +308,9 @@ export default function OrdersTab({ onGoToProducts }: OrdersTabProps) {
               </div>
 
               {/* Products Preview */}
-              <div className="mt-4 pt-4 border-t">
+              <div className="mt-4 border-t pt-4">
                 <div className="flex items-center gap-3 overflow-x-auto">
-                  {order.items.slice(0, 3).map((item) => (
+                  {order.items.map((item) => (
                     <div key={item.id} className="flex items-center gap-2 flex-shrink-0">
                       <Image
                         src={item.product.image || '/api/placeholder/40/40'}
@@ -332,11 +332,6 @@ export default function OrdersTab({ onGoToProducts }: OrdersTabProps) {
                       </div>
                     </div>
                   ))}
-                  {order.items.length > 3 && (
-                    <div className="text-sm text-gray-500 flex-shrink-0">
-                      +{order.items.length - 3} المزيد
-                    </div>
-                  )}
                 </div>
               </div>
             </CardContent>
@@ -397,6 +392,17 @@ export default function OrdersTab({ onGoToProducts }: OrdersTabProps) {
                         <div className="text-sm text-gray-600">
                           الكمية: {item.quantity} | السعر: {item.price.toLocaleString('ar-SA')} ج.م
                         </div>
+                        {selectedOrder.status === 'COMPLETED' && item.product.downloadUrl && (
+                          <a
+                            href={item.product.downloadUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center text-blue-600 hover:text-blue-800 mt-2"
+                          >
+                            <Download className="h-4 w-4 ml-1" />
+                            تحميل المنتج
+                          </a>
+                        )}
                       </div>
                       <div className="text-left">
                         <div className="font-semibold">
@@ -409,7 +415,7 @@ export default function OrdersTab({ onGoToProducts }: OrdersTabProps) {
               </div>
 
               {/* Order Summary */}
-              <div className="bg-gray-50 p-4 rounded-lg">
+              <div>
                 <h3 className="font-semibold mb-3">ملخص الطلب</h3>
                 <div className="space-y-2">
                   <div className="flex justify-between">

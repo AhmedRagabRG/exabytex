@@ -12,15 +12,19 @@ const cairo = Cairo({
   variable: "--font-cairo",
 });
 
+const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
 export const metadata: Metadata = {
   title: "Exa ByteX - الأتمتة والتكامل، روبوتات المحادثة، والتسويق الرقمي",
   description: "نقدم حلول الأتمتة والتكامل، روبوتات المحادثة الذكية، والتسويق الرقمي المتقدم لتحويل أعمالك نحو المستقبل",
   keywords: "أتمتة، تكامل الأنظمة، روبوتات محادثة، تسويق رقمي، ذكاء اصطناعي",
   authors: [{ name: "Exa ByteX" }],
+  metadataBase: new URL(baseUrl),
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: 'any', type: 'image/x-icon' },
-      { url: '/favicon.svg', sizes: 'any', type: 'image/svg+xml' },
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
     ],
     shortcut: '/favicon.ico',
     apple: '/favicon.ico',

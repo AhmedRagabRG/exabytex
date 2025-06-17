@@ -49,18 +49,8 @@ interface Product {
 
 async function getProduct(id: string): Promise<Product | null> {
   try {
-          const getBaseUrl = () => {
-        if (process.env.NEXT_PUBLIC_BASE_URL) {
-          return process.env.NEXT_PUBLIC_BASE_URL
-        }
-        if (process.env.NODE_ENV === 'production') {
-          return 'https://exabytex.com'
-        }
-        return 'http://localhost:3000'
-      }
-      
-      const baseUrl = getBaseUrl()
-    
+    // Get the base URL from environment or default to localhost
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
     const response = await fetch(`${baseUrl}/api/products/${id}`, {
       cache: 'no-store'
     })
@@ -69,7 +59,12 @@ async function getProduct(id: string): Promise<Product | null> {
       return null
     }
     
-    return await response.json()
+    const data = await response.json()
+    // Parse features from JSON string to array
+    return {
+      ...data,
+      features: typeof data.features === 'string' ? JSON.parse(data.features) : (data.features || [])
+    }
   } catch (error) {
     console.error('Error fetching product:', error)
     return null
@@ -267,6 +262,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
                 <AddToCartButton 
                   productId={product.id}
                   productTitle={product.title}
+                  price={product.price}
+                  discountedPrice={product.discountedPrice}
+                  hasDiscount={product.hasDiscount}
                 />
                 <SimpleActionButtons 
                   productId={product.id}

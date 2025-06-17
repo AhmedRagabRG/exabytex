@@ -15,21 +15,39 @@ interface Product {
 
 interface CartItem {
   id: string;
-  product: Product;
-  quantity: number;
+  productId: string;
   name: string;
   price: number;
   discountedPrice?: number;
+  hasDiscount?: boolean;
+  quantity: number;
   image?: string;
+}
+
+interface PromoCode {
+  id: string;
+  code: string;
+  description: string;
+  discountType: string;
+  discountValue: number;
+}
+
+interface PromoValidation {
+  valid: boolean;
+  promoCode: PromoCode;
+  discountAmount: number;
+  finalTotal: number;
 }
 
 interface CartStore {
   items: CartItem[];
-  hasHydrated: boolean;
-  setHasHydrated: (state: boolean) => void;
-  addToCart: (product: Product, quantity?: number) => void;
-  removeFromCart: (itemId: string) => void;
-  updateQuantity: (itemId: string, quantity: number) => void;
+  total: number;
+  isLoading: boolean;
+  appliedPromo: PromoValidation | null;
+  setAppliedPromo: (promo: PromoValidation | null) => void;
+  addToCart: (item: CartItem) => Promise<void>;
+  removeFromCart: (itemId: string) => Promise<void>;
+  updateQuantity: (itemId: string, quantity: number) => Promise<void>;
   clearCart: () => void;
   getCartTotal: () => number;
   getCartItemsCount: () => number;
@@ -39,80 +57,117 @@ export const useCartStore = create<CartStore>()(
   persist(
     (set, get) => ({
       items: [],
-      hasHydrated: false,
-
-      setHasHydrated: (state) => {
-        set({ hasHydrated: state });
+      total: 0,
+      isLoading: false,
+      appliedPromo: null,
+      setAppliedPromo: (promo) => {
+        set({ appliedPromo: promo });
       },
-
-      addToCart: (product, quantity = 1) => {
-        const { items } = get();
-        const existingItem = items.find(item => item.product.id === product.id);
-
-        if (existingItem) {
-          // تحديث الكمية إذا كان المنتج موجود
-          set({
-            items: items.map(item =>
-              item.product.id === product.id
-                ? { ...item, quantity: item.quantity + quantity }
-                : item
-            )
+      addToCart: async (item) => {
+        set({ isLoading: true });
+        try {
+          const items = get().items;
+          const existingItem = items.find(i => i.id === item.id);
+          
+          if (existingItem) {
+            const updatedItems = items.map(i => 
+              i.id === item.id 
+                ? { ...i, quantity: i.quantity + 1 }
+                : i
+            );
+            set({ items: updatedItems });
+          } else {
+            set({ items: [...items, { ...item, quantity: 1 }] });
+          }
+          
+          // إعادة حساب المجموع
+          const newTotal = get().items.reduce((sum, item) => {
+            const itemPrice = item.hasDiscount && item.discountedPrice !== undefined 
+              ? item.discountedPrice 
+              : item.price;
+            return sum + (itemPrice * item.quantity);
+          }, 0);
+          
+          set({ total: newTotal });
+        } catch (error) {
+          console.error('Error adding to cart:', error);
+          const event = new CustomEvent('addToCartError', {
+            detail: { message: error instanceof Error ? error.message : 'خطأ في إضافة المنتج للسلة' }
           });
-        } else {
-          // إضافة منتج جديد
-          const newItem: CartItem = {
-            id: `cart-${product.id}-${Date.now()}`,
-            product,
-            quantity,
-            name: product.title,
-            price: product.price,
-            discountedPrice: product.discountedPrice,
-            image: product.image
-          };
-
-          set({
-            items: [...items, newItem]
-          });
+          window.dispatchEvent(event);
+        } finally {
+          set({ isLoading: false });
         }
       },
+      removeFromCart: async (itemId) => {
+        set({ isLoading: true });
+        try {
+          const items = get().items.filter(item => item.id !== itemId);
+          
+          // إعادة حساب المجموع
+          const newTotal = items.reduce((sum, item) => {
+            const itemPrice = item.hasDiscount && item.discountedPrice !== undefined 
+              ? item.discountedPrice 
+              : item.price;
+            return sum + (itemPrice * item.quantity);
+          }, 0);
+          
+          set({ items, total: newTotal });
 
-      removeFromCart: (itemId) => {
-        const { items } = get();
-        set({
-          items: items.filter(item => item.id !== itemId)
-        });
-      },
-
-      updateQuantity: (itemId, quantity) => {
-        const { items } = get();
-        if (quantity <= 0) {
-          // إزالة العنصر إذا كانت الكمية صفر أو أقل
-          set({
-            items: items.filter(item => item.id !== itemId)
+          // إذا أصبحت السلة فارغة، إزالة الكوبون
+          if (items.length === 0) {
+            set({ appliedPromo: null });
+          }
+        } catch (error) {
+          console.error('Error removing from cart:', error);
+          const event = new CustomEvent('removeFromCartError', {
+            detail: { message: error instanceof Error ? error.message : 'خطأ في حذف المنتج من السلة' }
           });
-        } else {
-          set({
-            items: items.map(item =>
-              item.id === itemId
-                ? { ...item, quantity }
-                : item
-            )
-          });
+          window.dispatchEvent(event);
+        } finally {
+          set({ isLoading: false });
         }
       },
-
+      updateQuantity: async (itemId, quantity) => {
+        set({ isLoading: true });
+        try {
+          const items = get().items.map(item =>
+            item.id === itemId ? { ...item, quantity } : item
+          );
+          
+          // إعادة حساب المجموع
+          const newTotal = items.reduce((sum, item) => {
+            const itemPrice = item.hasDiscount && item.discountedPrice !== undefined 
+              ? item.discountedPrice 
+              : item.price;
+            return sum + (itemPrice * item.quantity);
+          }, 0);
+          
+          set({ items, total: newTotal });
+        } catch (error) {
+          console.error('Error updating quantity:', error);
+          const event = new CustomEvent('updateQuantityError', {
+            detail: { message: error instanceof Error ? error.message : 'خطأ في تحديث الكمية' }
+          });
+          window.dispatchEvent(event);
+        } finally {
+          set({ isLoading: false });
+        }
+      },
       clearCart: () => {
-        set({ items: [] });
+        set({ items: [], total: 0, appliedPromo: null });
       },
-
       getCartTotal: () => {
-        const { items } = get();
-        return items.reduce((total, item) => {
-          const price = item.discountedPrice || item.price;
+        const { items, appliedPromo } = get();
+        const subtotal = items.reduce((total, item) => {
+          const price = item.hasDiscount && item.discountedPrice !== undefined 
+            ? item.discountedPrice 
+            : item.price;
           return total + (price * item.quantity);
         }, 0);
+        
+        return appliedPromo ? appliedPromo.finalTotal : subtotal;
       },
-
       getCartItemsCount: () => {
         const { items } = get();
         return items.reduce((count, item) => count + item.quantity, 0);
@@ -121,9 +176,11 @@ export const useCartStore = create<CartStore>()(
     {
       name: 'ai-agency-cart',
       storage: createJSONStorage(() => localStorage),
-      onRehydrateStorage: () => (state) => {
-        state?.setHasHydrated(true);
-      },
+      partialize: (state) => ({
+        items: state.items,
+        total: state.total,
+        appliedPromo: state.appliedPromo
+      })
     }
   )
 ); 

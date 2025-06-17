@@ -5,6 +5,8 @@ import { PrismaAdapter } from "@auth/prisma-adapter"
 import { prisma } from "./prisma"
 import bcrypt from "bcryptjs"
 
+const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
+
 export const authOptions = {
   providers: [
     GoogleProvider({
@@ -68,6 +70,7 @@ export const authOptions = {
   session: {
     strategy: "jwt" as const
   },
+  baseUrl,
   callbacks: {
     async signIn({ user, account }: any) {
       console.log('🔑 SignIn callback - User:', user?.email, 'Account:', account?.provider)

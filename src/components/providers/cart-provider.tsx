@@ -22,6 +22,22 @@ interface CartState {
   items: CartItem[]
   total: number
   isLoading: boolean
+  appliedPromo: PromoValidation | null
+}
+
+interface PromoCode {
+  id: string;
+  code: string;
+  description: string;
+  discountType: string;
+  discountValue: number;
+}
+
+interface PromoValidation {
+  valid: boolean;
+  promoCode: PromoCode;
+  discountAmount: number;
+  finalTotal: number;
 }
 
 interface CartContextType extends CartState {
@@ -30,6 +46,7 @@ interface CartContextType extends CartState {
   removeFromCart: (itemId: string) => Promise<void>
   clearCart: () => void
   refreshCart: () => Promise<void>
+  setAppliedPromo: (promo: PromoValidation | null) => void
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
@@ -41,6 +58,7 @@ type CartAction =
   | { type: 'UPDATE_ITEM'; payload: { id: string; quantity: number } }
   | { type: 'REMOVE_ITEM'; payload: string }
   | { type: 'CLEAR_CART' }
+  | { type: 'SET_PROMO'; payload: PromoValidation | null }
 
 const cartReducer = (state: CartState, action: CartAction): CartState => {
   switch (action.type) {
@@ -55,11 +73,21 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
       if (existingItemIndex >= 0) {
         const updatedItems = [...state.items]
         updatedItems[existingItemIndex].quantity += action.payload.quantity
-        const total = updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+        const total = updatedItems.reduce((sum, item) => {
+          const itemPrice = item.hasDiscount && item.discountedPrice !== undefined 
+            ? item.discountedPrice 
+            : item.price;
+          return sum + (itemPrice * item.quantity);
+        }, 0);
         return { ...state, items: updatedItems, total }
       } else {
         const updatedItems = [...state.items, action.payload]
-        const total = updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+        const total = updatedItems.reduce((sum, item) => {
+          const itemPrice = item.hasDiscount && item.discountedPrice !== undefined 
+            ? item.discountedPrice 
+            : item.price;
+          return sum + (itemPrice * item.quantity);
+        }, 0);
         return { ...state, items: updatedItems, total }
       }
     }
@@ -70,18 +98,31 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
           ? { ...item, quantity: action.payload.quantity }
           : item
       )
-      const total = updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+      const total = updatedItems.reduce((sum, item) => {
+        const itemPrice = item.hasDiscount && item.discountedPrice !== undefined 
+          ? item.discountedPrice 
+          : item.price;
+        return sum + (itemPrice * item.quantity);
+      }, 0);
       return { ...state, items: updatedItems, total }
     }
     
     case 'REMOVE_ITEM': {
       const updatedItems = state.items.filter(item => item.id !== action.payload)
-      const total = updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+      const total = updatedItems.reduce((sum, item) => {
+        const itemPrice = item.hasDiscount && item.discountedPrice !== undefined 
+          ? item.discountedPrice 
+          : item.price;
+        return sum + (itemPrice * item.quantity);
+      }, 0);
       return { ...state, items: updatedItems, total }
     }
     
     case 'CLEAR_CART':
-      return { ...state, items: [], total: 0 }
+      return { ...state, items: [], total: 0, appliedPromo: null }
+
+    case 'SET_PROMO':
+      return { ...state, appliedPromo: action.payload }
     
     default:
       return state
@@ -93,8 +134,33 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(cartReducer, {
     items: [],
     total: 0,
-    isLoading: false
+    isLoading: false,
+    appliedPromo: null
   })
+
+  const setAppliedPromo = (promo: PromoValidation | null) => {
+    dispatch({ type: 'SET_PROMO', payload: promo })
+    // حفظ الكوبون في localStorage
+    if (promo) {
+      localStorage.setItem('appliedPromo', JSON.stringify(promo))
+    } else {
+      localStorage.removeItem('appliedPromo')
+    }
+  }
+
+  // استرجاع الكوبون من localStorage عند تحميل الصفحة
+  useEffect(() => {
+    const savedPromo = localStorage.getItem('appliedPromo')
+    if (savedPromo) {
+      try {
+        const promo = JSON.parse(savedPromo)
+        dispatch({ type: 'SET_PROMO', payload: promo })
+      } catch (error) {
+        console.error('Error parsing saved promo:', error)
+        localStorage.removeItem('appliedPromo')
+      }
+    }
+  }, [])
 
   const refreshCart = async () => {
     if (!session?.user) return
@@ -322,7 +388,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         updateQuantity,
         removeFromCart,
         clearCart,
-        refreshCart
+        refreshCart,
+        setAppliedPromo
       }}
     >
       {children}
@@ -343,7 +410,8 @@ export function useCart() {
       updateQuantity: async () => {},
       removeFromCart: async () => {},
       clearCart: () => {},
-      refreshCart: async () => {}
+      refreshCart: async () => {},
+      setAppliedPromo: () => {}
     }
   }
   return context

@@ -62,9 +62,9 @@ export default function CartPage() {
   const { items, total, isLoading, updateQuantity, removeFromCart } = useCart()
   const { data: session, status } = useSession()
   const router = useRouter()
+  const { setAppliedPromo, appliedPromo } = useCartStore()
   
   const [promoCode, setPromoCode] = useState('')
-  const [appliedPromo, setAppliedPromo] = useState<PromoValidation | null>(null)
   const [promoLoading, setPromoLoading] = useState(false)
   const [promoError, setPromoError] = useState('')
 

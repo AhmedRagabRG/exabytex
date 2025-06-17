@@ -98,7 +98,7 @@ export function CurrencyConversionModal({
               <div className="text-center">
                 <p className="text-sm text-gray-600 mb-1">مبلغ الدفع</p>
                 <div className="text-lg font-semibold text-green-700">
-                  {convertedAmount.toLocaleString('ar-SA', {
+                  {(convertedAmount || 0).toLocaleString('ar-SA', {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2
                   })} ج.م

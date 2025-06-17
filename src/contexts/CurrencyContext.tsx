@@ -3,6 +3,8 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { CurrencySettings } from '@/lib/currency';
 
+const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
 interface CurrencyContextType {
   settings: CurrencySettings;
   updateSettings: (newSettings: CurrencySettings) => void;
@@ -26,7 +28,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
 
   const fetchSettings = async () => {
     try {
-      const response = await fetch('/api/settings/currency');
+      const response = await fetch(`${baseUrl}/api/settings/currency`);
       if (response.ok) {
         const data = await response.json();
         if (data.settings) {
