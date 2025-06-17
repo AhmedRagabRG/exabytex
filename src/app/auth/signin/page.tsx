@@ -100,7 +100,7 @@ export default function SignInPage() {
             </div>
             <div className="flex flex-col">
               <span className="text-3xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-                Exa Bytex
+                Exa ByteX
               </span>
               <span className="text-sm text-gray-400 font-medium">
                 مستقبل الذكاء الاصطناعي

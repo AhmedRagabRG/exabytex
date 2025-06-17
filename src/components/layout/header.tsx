@@ -18,8 +18,8 @@ import {
   Bot,
   Globe,
   Coins,
-  Settings
 } from "lucide-react"
+import Image from 'next/image';
 import { NoSSR } from "@/components/no-ssr"
 
 export function Header() {
@@ -110,9 +110,15 @@ export function Header() {
                 <div className={`bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-xl flex items-center justify-center transform group-hover:scale-110 transition-all duration-500 shadow-lg ${
                   isScrolled ? 'w-8 h-8 md:w-10 md:h-10' : 'w-10 h-10 md:w-12 md:h-12'
                 }`}>
-                  <Brain className={`text-white transition-all duration-500 ${
-                    isScrolled ? 'w-4 h-4 md:w-5 md:h-5' : 'w-5 h-5 md:w-6 md:h-6'
-                  }`} />
+                    <Image 
+                        src="/logo.svg"
+                        alt="logo"
+                        width={isScrolled ? 4:5}
+                        height={isScrolled ? 4:5}
+                        className={`text-white transition-all duration-500 ${
+                          isScrolled ? 'w-5 h-5 md:w-6 md:h-6' : 'w-6 h-6 md:w-7 md:h-7'
+                        }`}
+                    />
                 </div>
                 {/* Floating sparkles */}
                 <div className={`absolute -top-1 -right-1 bg-yellow-400 rounded-full animate-ping transition-all duration-500 ${
@@ -126,7 +132,7 @@ export function Header() {
                 <span className={`font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent transition-all duration-500 ${
                   isScrolled ? 'text-lg md:text-xl' : 'text-xl md:text-2xl'
                 }`}>
-                  Exa Bytex
+                  Exa ByteX
                 </span>
                 <span className={`text-gray-400 font-medium transition-all duration-500 ${
                   isScrolled ? 'text-xs opacity-70' : 'text-xs'

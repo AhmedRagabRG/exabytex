@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { RichTextEditor } from '@/components/ui/RichTextEditor';
 import { 
   Eye, 
   Check, 
@@ -22,8 +23,13 @@ import {
   Trash2,
   EyeOff,
   Edit,
-  Save
+  Save,
+  Plus
 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { formatContent } from '@/lib/blog';
 
 interface Blog {
   id: string;
@@ -690,7 +696,7 @@ export function BlogManagement() {
 
                 <div className="prose max-w-none text-gray-700">
                   <p className="text-lg text-gray-600 mb-4">{selectedBlog.excerpt}</p>
-                  <div dangerouslySetInnerHTML={{ __html: selectedBlog.content }} />
+                  <div className="rich-content" dangerouslySetInnerHTML={{ __html: formatContent(selectedBlog.content) }} />
                 </div>
               </div>
 
@@ -865,16 +871,18 @@ export function BlogManagement() {
                 {/* المحتوى */}
                 <div>
                   <label htmlFor="edit-content" className="block text-sm font-medium text-gray-700 mb-2">
+                    <FileText className="inline h-4 w-4 ml-1" />
                     محتوى المقال
                   </label>
-                  <textarea
-                    id="edit-content"
+                  <RichTextEditor
                     value={editFormData.content}
-                    onChange={(e) => setEditFormData(prev => ({ ...prev, content: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    rows={12}
-                    placeholder="اكتب محتوى المقال بتنسيق HTML..."
+                    onChange={(value) => setEditFormData(prev => ({ ...prev, content: value }))}
+                    placeholder="اكتب محتوى المقال... يمكنك إضافة الصور والتنسيق المتقدم"
+                    height={400}
                   />
+                  <p className="text-xs text-gray-500 mt-2">
+                    💡 يمكنك إضافة الصور والنصوص المنسقة باستخدام أدوات التحرير
+                  </p>
                 </div>
 
                 {/* معلومات المقال */}

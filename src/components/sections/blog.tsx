@@ -8,9 +8,6 @@ import {
   Calendar,
   Clock,
   Tag,
-  // TrendingUp,
-  // Brain,
-  // Zap
 } from "lucide-react"
 
 export function Blog() {
@@ -46,13 +43,6 @@ export function Blog() {
       categoryColor: "bg-green-100 text-green-800"
     }
   ]
-
-  // const categories = [
-  //   { name: "ذكاء اصطناعي", count: 15, icon: Brain, color: "from-blue-500 to-cyan-500" },
-  //   { name: "أتمتة", count: 12, icon: Zap, color: "from-purple-500 to-pink-500" },
-  //   { name: "تسويق رقمي", count: 8, icon: TrendingUp, color: "from-green-500 to-emerald-500" },
-  //   { name: "تطوير", count: 10, icon: BookOpen, color: "from-orange-500 to-red-500" }
-  // ]
 
   return (
     <section className="relative py-20 lg:py-32 bg-gradient-to-b from-white via-slate-50 to-white overflow-hidden">

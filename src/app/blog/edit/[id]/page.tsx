@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { RichTextEditor } from '@/components/ui/RichTextEditor';
 import { 
   ArrowLeft, 
   Save, 
@@ -17,7 +18,8 @@ import {
   Calendar, 
   User,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  FileText
 } from 'lucide-react';
 
 interface BlogPost {
@@ -339,16 +341,18 @@ export default function EditBlogPage({ params }: EditBlogPageProps) {
                 {/* Content */}
                 <div>
                   <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-2">
+                    <FileText className="inline h-4 w-4 ml-1" />
                     محتوى المقال
                   </label>
-                  <Textarea
-                    id="content"
+                  <RichTextEditor
                     value={formData.content}
-                    onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-                    placeholder="اكتب محتوى المقال بتنسيق HTML..."
-                    rows={15}
-                    className="font-mono text-sm"
+                    onChange={(value) => setFormData(prev => ({ ...prev, content: value }))}
+                    placeholder="اكتب محتوى المقال... يمكنك إضافة الصور والتنسيق المتقدم"
+                    height={500}
                   />
+                  <p className="text-xs text-gray-500 mt-2">
+                    💡 يمكنك إضافة الصور والنصوص المنسقة باستخدام أدوات التحرير
+                  </p>
                 </div>
               </CardContent>
             </Card>

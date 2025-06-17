@@ -162,7 +162,7 @@ export default function PrivacyPolicyPage() {
           </CardHeader>
           <CardContent className="text-lg text-gray-300 leading-relaxed">
             <p className="mb-4">
-              شركة <strong className="text-blue-400">Exa Bytex</strong> ("نحن"، "لنا"، "الشركة") تقدر خصوصيتك وتلتزم بحماية معلوماتك الشخصية. 
+              شركة <strong className="text-blue-400">Exa ByteX</strong> ("نحن"، "لنا"، "الشركة") تقدر خصوصيتك وتلتزم بحماية معلوماتك الشخصية. 
               هذه السياسة تصف ممارساتنا في جمع واستخدام وحماية المعلومات التي تقدمها لنا عند استخدام موقعنا الإلكتروني وخدماتنا.
             </p>
             <p className="mb-4">

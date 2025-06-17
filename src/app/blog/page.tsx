@@ -124,7 +124,7 @@ export default function BlogPage() {
           <div className="flex items-center justify-center gap-3 mb-6">
             <BookOpen className="h-12 w-12 text-blue-400" />
             <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-              مدونة Exa Bytex
+              مدونة Exa ByteX
             </h1>
           </div>
           <p className="text-xl text-gray-300 max-w-2xl mx-auto mb-8">

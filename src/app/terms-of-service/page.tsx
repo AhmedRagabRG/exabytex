@@ -46,7 +46,7 @@ export default function TermsOfServicePage() {
       icon: Lock,
       title: "الملكية الفكرية",
       content: [
-        "جميع المحتويات والتطبيقات والتقنيات مملوكة لشركة Exa Bytex",
+        "جميع المحتويات والتطبيقات والتقنيات مملوكة لشركة Exa ByteX",
         "نمنحك رخصة محدودة وغير حصرية لاستخدام منتجاتنا",
         "لا يُسمح بنسخ أو تعديل أو إنشاء أعمال مشتقة من منتجاتنا",
         "علامتنا التجارية وشعارنا محميان بموجب قوانين حقوق الطبع والنشر",
@@ -174,12 +174,12 @@ export default function TermsOfServicePage() {
           </CardHeader>
           <CardContent className="text-lg text-gray-300 leading-relaxed">
             <p className="mb-4">
-              مرحباً بك في <strong className="text-purple-400">Exa Bytex</strong>. باستخدام موقعنا الإلكتروني أو أي من خدماتنا، 
+              مرحباً بك في <strong className="text-purple-400">Exa ByteX</strong>. باستخدام موقعنا الإلكتروني أو أي من خدماتنا، 
               فإنك توافق على الالتزام بهذه الشروط والأحكام. إذا كنت لا توافق على أي من هذه الشروط، 
               يرجى عدم استخدام خدماتنا.
             </p>
             <p className="mb-4">
-              هذه الشروط تشكل اتفاقية قانونية ملزمة بينك وبين شركة Exa Bytex. نحتفظ بالحق في تعديل 
+              هذه الشروط تشكل اتفاقية قانونية ملزمة بينك وبين شركة Exa ByteX. نحتفظ بالحق في تعديل 
               هذه الشروط في أي وقت، وسنقوم بإشعارك بأي تغييرات مهمة.
             </p>
             <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-4">

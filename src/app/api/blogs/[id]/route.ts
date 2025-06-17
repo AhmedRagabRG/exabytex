@@ -4,10 +4,10 @@ import { prisma } from "@/lib/prisma"
 // GET - جلب مقال واحد بالـ ID أو slug
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params
+    const { id } = await params
     
     // البحث عن المقال بالـ ID أو slug
     const blog = await prisma.blogPost.findFirst({
@@ -98,10 +98,10 @@ export async function GET(
 // PUT - تحديث مقال
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params
+    const { id } = await params
     const body = await request.json()
     
     const {
@@ -221,10 +221,10 @@ export async function PUT(
 // DELETE - حذف مقال
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params
+    const { id } = await params
 
     // التحقق من وجود المقال
     const existingBlog = await prisma.blogPost.findUnique({

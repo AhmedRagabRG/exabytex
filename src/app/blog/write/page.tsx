@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { PenTool, Image as ImageIcon, Tag, Send, AlertCircle, CheckCircle } from 'lucide-react';
+import { RichTextEditor } from '@/components/ui/RichTextEditor';
+import { PenTool, Image as ImageIcon, Tag, Send, AlertCircle, CheckCircle, FileText } from 'lucide-react';
 import Link from 'next/link';
 
 export default function WriteBlogPage() {
@@ -256,18 +257,19 @@ export default function WriteBlogPage() {
               {/* محتوى المقال */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <FileText className="inline h-4 w-4 ml-1" />
                   محتوى المقال *
                 </label>
-                <Textarea
-                  value={formData.content}
-                  onChange={(e) => handleInputChange('content', e.target.value)}
-                  placeholder="اكتب محتوى مقالك هنا... يمكنك استخدام Markdown للتنسيق"
-                  rows={15}
-                  className="bg-white/5 border-white/20 text-white placeholder:text-gray-400 font-mono"
-                  required
-                />
-                <p className="text-xs text-gray-400 mt-1">
-                  يمكنك استخدام Markdown للتنسيق (العناوين، القوائم، الروابط، إلخ...)
+                <div className="bg-white rounded-lg p-1 shadow-lg">
+                  <RichTextEditor
+                    value={formData.content}
+                    onChange={(value) => handleInputChange('content', value)}
+                    placeholder="اكتب محتوى مقالك هنا... يمكنك إضافة الصور والتنسيق المتقدم"
+                    height={500}
+                  />
+                </div>
+                <p className="text-xs text-gray-400 mt-2">
+                  💡 يمكنك الآن إضافة الصور والنصوص المنسقة بسهولة باستخدام أدوات التحرير أعلاه
                 </p>
               </div>
 
@@ -312,7 +314,9 @@ export default function WriteBlogPage() {
             <li>• اكتب عنوان جذاب ووصفي</li>
             <li>• استخدم ملخص يوضح محتوى المقال بشكل مختصر</li>
             <li>• أضف كلمات مفتاحية ذات صلة لتسهيل البحث</li>
-            <li>• استخدم Markdown للتنسيق (# للعناوين، ** للخط العريض، إلخ...)</li>
+            <li>• 🖼️ يمكنك إضافة الصور بالضغط على أيقونة الصورة في المحرر</li>
+            <li>• 📝 استخدم أدوات التنسيق المتاحة (عناوين، قوائم، نص عريض، إلخ...)</li>
+            <li>• 💬 استخدم علامات التنصيص لتمييز النصوص المهمة</li>
             <li>• {(session?.user as any)?.role === 'MANAGER' || (session?.user as any)?.role === 'ADMIN' 
               ? 'سيتم نشر مقالك مباشرة لأن لديك صلاحيات إدارية' 
               : 'سيتم إرسال مقالك للمراجعة من قبل المديرين قبل النشر'}</li>

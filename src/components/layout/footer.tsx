@@ -15,9 +15,9 @@ import {
   Star,
   ArrowRight,
   Heart,
-  Code,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import Image from 'next/image';
 
 export function Footer() {
   const quickLinks = [
@@ -97,7 +97,13 @@ export function Footer() {
               <div className="flex items-center space-x-3 rtl:space-x-reverse mb-6">
                 <div className="relative">
                   <div className="w-14 h-14 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
-                    <Brain className="text-white w-7 h-7" />
+                    <Image 
+                        src="/logo.svg"
+                        alt="logo"
+                        width='9'
+                        height='9'
+                        className='text-white transition-all duration-500 w-9 h-9'
+                    />
                   </div>
                   {/* Floating sparkles */}
                   <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-ping"></div>
@@ -105,7 +111,7 @@ export function Footer() {
                 </div>
                 <div className="flex flex-col">
                   <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-                    Exa Bytex
+                  Exa ByteX
                   </span>
                   <span className="text-sm text-gray-400 font-medium">
                     مستقبل الذكاء الاصطناعي
@@ -219,7 +225,7 @@ export function Footer() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4">
               <div className="flex items-center gap-2 text-gray-300">
-                <span>© 2025 Exa Bytex. جميع الحقوق محفوظة.</span>
+                <span>© 2025 Exa ByteX. جميع الحقوق محفوظة.</span>
                 <span className="text-red-400">
                   صُنع بـ <Heart className="w-4 h-4 inline text-red-500" /> في exabytex
                 </span>

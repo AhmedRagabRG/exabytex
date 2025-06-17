@@ -166,7 +166,7 @@ export default function RefundPolicyPage() {
           </CardHeader>
           <CardContent className="text-lg text-gray-300 leading-relaxed">
             <p className="mb-4">
-              في <strong className="text-green-400">Exa Bytex</strong>، نسعى دائماً لتقديم منتجات وخدمات عالية الجودة تلبي توقعات عملائنا. 
+              في <strong className="text-green-400">Exa ByteX</strong>، نسعى دائماً لتقديم منتجات وخدمات عالية الجودة تلبي توقعات عملائنا. 
               هذه السياسة توضح الشروط والأحكام المتعلقة بطلبات الاسترداد للمنتجات والخدمات المختلفة.
             </p>
             <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">

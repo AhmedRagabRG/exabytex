@@ -13,10 +13,10 @@ const cairo = Cairo({
 });
 
 export const metadata: Metadata = {
-  title: "Exa Bytex - الأتمتة والتكامل، روبوتات المحادثة، والتسويق الرقمي",
+  title: "Exa ByteX - الأتمتة والتكامل، روبوتات المحادثة، والتسويق الرقمي",
   description: "نقدم حلول الأتمتة والتكامل، روبوتات المحادثة الذكية، والتسويق الرقمي المتقدم لتحويل أعمالك نحو المستقبل",
   keywords: "أتمتة، تكامل الأنظمة، روبوتات محادثة، تسويق رقمي، ذكاء اصطناعي",
-  authors: [{ name: "Exa Bytex" }],
+  authors: [{ name: "Exa ByteX" }],
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: 'any', type: 'image/x-icon' },
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   },
   manifest: '/site.webmanifest',
   openGraph: {
-    title: "Exa Bytex - الأتمتة والتكامل، روبوتات المحادثة، والتسويق الرقمي",
+    title: "Exa ByteX - الأتمتة والتكامل، روبوتات المحادثة، والتسويق الرقمي",
     description: "حلول الأتمتة والتكامل، روبوتات المحادثة الذكية، والتسويق الرقمي المتقدم",
     type: "website",
     locale: "ar_SA",
@@ -36,13 +36,13 @@ export const metadata: Metadata = {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Exa Bytex - حلول الأتمتة والتسويق الرقمي',
+        alt: 'Exa ByteX - حلول الأتمتة والتسويق الرقمي',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: "Exa Bytex - الأتمتة والتكامل، روبوتات المحادثة، والتسويق الرقمي",
+    title: "Exa ByteX - الأتمتة والتكامل، روبوتات المحادثة، والتسويق الرقمي",
     description: "حلول الأتمتة والتكامل، روبوتات المحادثة الذكية، والتسويق الرقمي المتقدم",
     images: ['/og-image.png'],
   },

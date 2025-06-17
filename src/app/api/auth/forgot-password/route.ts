@@ -84,11 +84,11 @@ export async function POST(request: NextRequest) {
         const mailOptions = {
           from: process.env.SMTP_FROM || process.env.SMTP_USER,
           to: email,
-          subject: 'استعادة كلمة المرور - Exa Bytex',
+          subject: 'استعادة كلمة المرور - Exa ByteX',
           html: `
             <div style="direction: rtl; font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; text-align: center; color: white;">
-                <h1>Exa Bytex</h1>
+                <h1>Exa ByteX</h1>
                 <h2>استعادة كلمة المرور</h2>
               </div>
               
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
                 <p style="font-size: 16px; color: #333;">مرحباً،</p>
                 
                 <p style="font-size: 16px; color: #333;">
-                  تلقينا طلباً لإعادة تعيين كلمة المرور الخاصة بحسابك في Exa Bytex.
+                  تلقينا طلباً لإعادة تعيين كلمة المرور الخاصة بحسابك في Exa ByteX.
                 </p>
                 
                 <p style="font-size: 16px; color: #333;">
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
               </div>
               
               <div style="background: #333; color: white; padding: 20px; text-align: center; font-size: 12px;">
-                <p>© 2025 Exa Bytex. جميع الحقوق محفوظة.</p>
+                <p>© 2025 Exa ByteX. جميع الحقوق محفوظة.</p>
                 <p>إذا كان لديك أي استفسار، تواصل معنا</p>
               </div>
             </div>

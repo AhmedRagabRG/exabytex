@@ -248,4 +248,77 @@ export async function getAllTags(): Promise<string[]> {
   } finally {
     await prisma.$disconnect()
   }
+}
+
+// دالة معالجة المحتوى لتحسين العرض والتنظيف من inline styles
+export const formatContent = (content: string): string => {
+  if (!content) return ''
+  
+  let formattedContent = content
+  
+  // تنظيف inline styles والنصوص الخاصة بـ CSS التي تظهر كنص
+  formattedContent = formattedContent
+    .replace(/style="[^"]*"/g, '') // إزالة style attributes
+    .replace(/style='[^']*'/g, '') // إزالة style attributes بعلامات تنصيص مفردة
+    // إزالة CSS properties التي تظهر كنص عادي
+    .replace(/border-right-width:\s*\d+px;?\s*/g, '')
+    .replace(/border-right-color:\s*rgb\([^)]+\);?\s*/g, '')
+    .replace(/background:\s*rgb\([^)]+\);?\s*/g, '')
+    .replace(/padding:\s*\d+px;?\s*/g, '')
+    .replace(/margin[^:]*:\s*\d+px[^;]*;?\s*/g, '')
+    .replace(/border-radius:\s*\d+px;?\s*/g, '')
+    .replace(/font-style:\s*italic;?\s*/g, '')
+    .replace(/color:\s*rgb\([^)]+\);?\s*/g, '')
+    .replace(/text-align:\s*center;?\s*/g, '')
+    .replace(/font-weight:\s*\d+;?\s*/g, '')
+  
+  // إذا كان المحتوى لا يحتوي على HTML، نعالجه كنص عادي
+  if (!formattedContent.includes('<') || (!formattedContent.includes('<p>') && !formattedContent.includes('<h') && !formattedContent.includes('<a'))) {
+    formattedContent = formattedContent
+      // معالجة علامات التنصيص العربية والإنجليزية
+      .replace(/[""]([^""]*?)[""|""]/g, '<mark class="quote-highlight">"$1"</mark>')
+      .replace(/[''']([^''']*?)['''|'']/g, '<mark class="quote-light">\'$1\'</mark>')
+      // معالجة النص العريض
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      // معالجة النص المائل
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      // معالجة العناوين
+      .replace(/^### (.*$)/gm, '<h3 class="content-heading">$1</h3>')
+      .replace(/^## (.*$)/gm, '<h2 class="content-heading">$1</h2>')
+      .replace(/^# (.*$)/gm, '<h1 class="content-heading">$1</h1>')
+      // معالجة القوائم
+      .replace(/^- (.*$)/gm, '<li>$1</li>')
+      .replace(/(<li>.*<\/li>)/g, '<ul>$1</ul>')
+      // معالجة الأكواد
+      .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      // معالجة أسطر جديدة
+      .replace(/\n\n/g, '</p><p>')
+      .replace(/\n/g, '<br />')
+    
+    // تغليف النص في فقرات
+    if (formattedContent && !formattedContent.includes('<p>')) {
+      formattedContent = `<p>${formattedContent}</p>`
+    }
+  } else {
+    // المحتوى يحتوي على HTML بالفعل، نحسنه ونضيف classes
+    formattedContent = formattedContent
+      // معالجة علامات التنصيص
+      .replace(/[""]([^""]*?)[""|""]/g, '<mark class="quote-highlight">"$1"</mark>')
+      .replace(/[''']([^''']*?)['''|'']/g, '<mark class="quote-light">\'$1\'</mark>')
+      // إضافة classes للعناصر إذا لم تكن موجودة
+      .replace(/<h([1-6])(?![^>]*class)/g, '<h$1 class="content-heading"')
+      .replace(/<blockquote(?![^>]*class)/g, '<blockquote class="content-quote"')
+      .replace(/<img(?![^>]*class)/g, '<img class="content-image"')
+      .replace(/<a(?![^>]*class)([^>]*target="_blank"[^>]*)>/g, '<a class="content-link"$1>')
+      // إضافة div container للصور إذا لم تكن موجودة
+      .replace(/<img([^>]*class="content-image"[^>]*)>/g, '<div class="image-container"><img$1></div>')
+  }
+  
+  // تنظيف المسافات الزائدة
+  formattedContent = formattedContent
+    .replace(/\s+/g, ' ') // تنظيف المسافات الزائدة
+    .trim()
+  
+  return formattedContent
 } 

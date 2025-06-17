@@ -91,7 +91,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
   }
 
   return {
-    title: `${product.title} - Exa Bytex Store`,
+    title: `${product.title} - Exa ByteX Store`,
     description: product.description,
     openGraph: {
       title: product.title,

@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
           html: `
             <div style="direction: rtl; font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8f9fa;">
               <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; color: white;">
-                <h1 style="margin: 0; font-size: 28px;">Exa Bytex</h1>
+                <h1 style="margin: 0; font-size: 28px;">Exa ByteX</h1>
                 <h2 style="margin: 10px 0 0 0; font-size: 20px; font-weight: normal;">رسالة تواصل جديدة</h2>
               </div>
               
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
               </div>
               
               <div style="background: #333; color: white; padding: 20px; text-align: center; font-size: 12px;">
-                <p style="margin: 0;">© 2024 Exa Bytex. جميع الحقوق محفوظة.</p>
+                <p style="margin: 0;">© 2024 Exa ByteX. جميع الحقوق محفوظة.</p>
                 <p style="margin: 5px 0 0 0;">نظام إدارة الرسائل التلقائي</p>
               </div>
             </div>
@@ -87,11 +87,11 @@ export async function POST(request: NextRequest) {
         const clientMailOptions = {
           from: process.env.SMTP_FROM || process.env.SMTP_USER,
           to: email,
-          subject: 'تأكيد استلام رسالتك - Exa Bytex',
+          subject: 'تأكيد استلام رسالتك - Exa ByteX',
           html: `
             <div style="direction: rtl; font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; color: white;">
-                <h1 style="margin: 0; font-size: 28px;">Exa Bytex</h1>
+                <h1 style="margin: 0; font-size: 28px;">Exa ByteX</h1>
                 <h2 style="margin: 10px 0 0 0; font-size: 20px; font-weight: normal;">شكراً لتواصلك معنا</h2>
               </div>
               
@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
               </div>
               
               <div style="background: #333; color: white; padding: 20px; text-align: center; font-size: 12px;">
-                <p style="margin: 0;">© 2024 Exa Bytex. جميع الحقوق محفوظة.</p>
+                <p style="margin: 0;">© 2024 Exa ByteX. جميع الحقوق محفوظة.</p>
                 <p style="margin: 5px 0 0 0;">شكراً لثقتك في خدماتنا</p>
               </div>
             </div>

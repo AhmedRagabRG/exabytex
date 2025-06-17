@@ -1,15 +1,15 @@
 {
-  "name": "Exa Bytex",
-  "short_name": "ExaBytex",
+  "name": "Exa ByteX",
+  "short_name": "Exa ByteX",
   "description": "حلول الأتمتة والتكامل، روبوتات المحادثة الذكية، والتسويق الرقمي المتقدم",
   "icons": [
     {
-      "src": "/favicon.ico",
+      "src": "favicon.ico",
       "sizes": "32x32",
       "type": "image/x-icon"
     },
     {
-      "src": "/favicon.svg",
+      "src": "favicon.ico",
       "sizes": "any",
       "type": "image/svg+xml"
     }

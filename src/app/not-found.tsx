@@ -129,7 +129,7 @@ export default function NotFound() {
               هل تعلم؟
             </h4>
             <p className="text-gray-300 leading-relaxed">
-              نحن في <span className="text-blue-400 font-semibold">Exa Bytex</span> نعمل باستمرار على تطوير موقعنا وإضافة صفحات جديدة. 
+              نحن في <span className="text-blue-400 font-semibold">Exa ByteX</span> نعمل باستمرار على تطوير موقعنا وإضافة صفحات جديدة. 
               إذا كنت تبحث عن شيء محدد، تواصل معنا وسنساعدك في العثور عليه!
             </p>
           </div>

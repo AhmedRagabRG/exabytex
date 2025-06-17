@@ -10,6 +10,7 @@ import { ShareButton } from "@/components/blog/ShareButton"
 import { SaveButton } from "@/components/blog/SaveButton"
 import { Comments } from "@/components/blog/Comments"
 import { Button } from "@/components/ui/button"
+import { formatContent } from "@/lib/blog"
 
 interface BlogPost {
   id: string;
@@ -239,15 +240,9 @@ export default function BlogPostPage({ params }: BlogPostPageProps) {
             {/* Article Content */}
             <div className="prose prose-lg max-w-none text-gray-800 leading-relaxed mb-12">
               <div 
+                className="rich-content"
                 dangerouslySetInnerHTML={{ 
-                  __html: post.content
-                    .replace(/\n/g, '<br />')
-                    .replace(/<h2>/g, '<h2 class="text-2xl font-bold text-gray-900 mt-8 mb-4">')
-                    .replace(/<h3>/g, '<h3 class="text-xl font-semibold text-gray-800 mt-6 mb-3">')
-                    .replace(/<ul>/g, '<ul class="list-disc list-inside space-y-2 my-4">')
-                    .replace(/<li>/g, '<li class="text-gray-700">')
-                    .replace(/<p>/g, '<p class="text-gray-700 mb-4">')
-                    .replace(/<strong>/g, '<strong class="font-semibold text-gray-900">')
+                  __html: formatContent(post.content)
                 }} 
               />
             </div>
