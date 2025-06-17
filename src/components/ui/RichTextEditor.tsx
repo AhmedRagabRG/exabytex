@@ -122,15 +122,53 @@ export function RichTextEditor({
   // إضافة صورة
   const insertImage = () => {
     if (imageUrl.trim()) {
-      const imageHTML = `<div style="text-align: center; margin: 20px 0;"><img src="${imageUrl}" alt="صورة" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); display: block; margin: 0 auto;" /></div>`;
-      execCommand('insertHTML', imageHTML);
-      setImageUrl('');
-      setShowImageDialog(false);
-      // إضافة فترة انتظار قصيرة لضمان التحديث
-      setTimeout(() => {
-        handleContentChange();
-        refreshEditor();
-      }, 100);
+      // تنظيف URL وضمان أنه يبدأ بـ http/https
+      let cleanUrl = imageUrl.trim();
+      if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+        cleanUrl = 'https://' + cleanUrl;
+      }
+      
+      // إزالة أي @ من بداية الرابط
+      cleanUrl = cleanUrl.replace(/^@/, '');
+      
+      const imageHTML = `<div class="image-container"><img src="${cleanUrl}" alt="صورة" class="content-image" /></div>`;
+      
+      // التأكد من وجود المحرر والتركيز عليه
+      if (editorRef.current) {
+        editorRef.current.focus();
+        
+        // حفظ موضع المؤشر
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          range.deleteContents();
+          
+          // إنشاء عنصر مؤقت لإدراج HTML
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = imageHTML;
+          const imageElement = tempDiv.firstChild;
+          
+          if (imageElement) {
+            range.insertNode(imageElement);
+            range.collapse(false);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
+        } else {
+          // إذا لم يكن هناك تحديد، أدرج في النهاية
+          document.execCommand('insertHTML', false, imageHTML);
+        }
+        
+        // إعادة تعيين القيم
+        setImageUrl('');
+        setShowImageDialog(false);
+        
+        // تحديث المحتوى
+        setTimeout(() => {
+          handleContentChange();
+          refreshEditor();
+        }, 100);
+      }
     }
   };
 

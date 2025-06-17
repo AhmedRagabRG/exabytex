@@ -232,7 +232,7 @@ export default function BlogPostPage({ params }: BlogPostPageProps) {
                   alt={post.title}
                   width={800}
                   height={256}
-                  className="w-full h-64 object-cover rounded-lg shadow-md"
+                  className="w-full h-full object-cover rounded-lg shadow-md"
                 />
               </div>
             )}

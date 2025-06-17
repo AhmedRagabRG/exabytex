@@ -13,6 +13,7 @@ const nextConfig = {
       'res.cloudinary.com',
       'lh3.googleusercontent.com', // Google profile images
       'avatars.githubusercontent.com', // GitHub profile images
+      'r2.fivemanage.com', // Discord profile images
       'cdn.discordapp.com' // Discord profile images
     ],
     formats: ['image/webp', 'image/avif'],
