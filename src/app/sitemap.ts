@@ -1,54 +1,77 @@
 import { MetadataRoute } from 'next'
-import prisma from '@/lib/prisma'
+import { PrismaClient } from '@prisma/client'
+
+const prisma = new PrismaClient()
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  // الحصول على جميع المقالات المنشورة
-  const posts = await prisma.blogPost.findMany({
-    where: {
-      status: 'PUBLISHED',
-      published: true
-    },
-    select: {
-      slug: true,
-      updatedAt: true
-    }
-  })
+  try {
+    // الحصول على جميع المقالات المنشورة
+    const posts = await prisma.blogPost.findMany({
+      where: {
+        status: 'PUBLISHED',
+        published: true
+      },
+      select: {
+        slug: true,
+        updatedAt: true
+      }
+    })
 
-  // إنشاء روابط المقالات
-  const postUrls = posts.map((post) => ({
-    url: `https://exabytex.com/blog/${post.slug}`,
-    lastModified: post.updatedAt,
-    changeFrequency: 'weekly' as const,
-    priority: 0.8
-  }))
+    // إنشاء روابط المقالات
+    const postUrls = posts.map((post) => ({
+      url: `https://exabytex.com/blog/${post.slug}`,
+      lastModified: post.updatedAt,
+      changeFrequency: 'weekly' as const,
+      priority: 0.8
+    }))
 
-  // الروابط الثابتة للموقع
-  const staticUrls = [
-    {
-      url: 'https://exabytex.com',
-      lastModified: new Date(),
-      changeFrequency: 'daily' as const,
-      priority: 1
-    },
-    {
-      url: 'https://exabytex.com/blog',
-      lastModified: new Date(),
-      changeFrequency: 'daily' as const,
-      priority: 0.9
-    },
-    {
-      url: 'https://exabytex.com/about',
-      lastModified: new Date(),
-      changeFrequency: 'monthly' as const,
-      priority: 0.7
-    },
-    {
-      url: 'https://exabytex.com/contact',
-      lastModified: new Date(),
-      changeFrequency: 'monthly' as const,
-      priority: 0.7
-    }
-  ]
+    // الروابط الثابتة للموقع
+    const staticUrls = [
+      {
+        url: 'https://exabytex.com',
+        lastModified: new Date(),
+        changeFrequency: 'daily' as const,
+        priority: 1
+      },
+      {
+        url: 'https://exabytex.com/blog',
+        lastModified: new Date(),
+        changeFrequency: 'daily' as const,
+        priority: 0.9
+      },
+      {
+        url: 'https://exabytex.com/about',
+        lastModified: new Date(),
+        changeFrequency: 'monthly' as const,
+        priority: 0.7
+      },
+      {
+        url: 'https://exabytex.com/contact',
+        lastModified: new Date(),
+        changeFrequency: 'monthly' as const,
+        priority: 0.7
+      }
+    ]
 
-  return [...staticUrls, ...postUrls]
+    return [...staticUrls, ...postUrls]
+  } catch (error) {
+    console.error('Error generating sitemap:', error)
+    // في حالة حدوث خطأ، نعيد الروابط الثابتة فقط
+    return [
+      {
+        url: 'https://exabytex.com',
+        lastModified: new Date(),
+        changeFrequency: 'daily' as const,
+        priority: 1
+      },
+      {
+        url: 'https://exabytex.com/blog',
+        lastModified: new Date(),
+        changeFrequency: 'daily' as const,
+        priority: 0.9
+      }
+    ]
+  } finally {
+    await prisma.$disconnect()
+  }
 } 
