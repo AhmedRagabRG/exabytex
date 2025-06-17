@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Mail, Lock, Eye, EyeOff, Brain, Sparkles, Zap, Bot, ArrowRight, AlertCircle } from "lucide-react"
+import Image from 'next/image';
 
 export default function SignInPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -92,7 +93,13 @@ export default function SignInPage() {
           <Link href="/" className="flex items-center justify-center space-x-3 rtl:space-x-reverse mb-6 group">
             <div className="relative">
               <div className="w-16 h-16 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-                <Brain className="text-white w-8 h-8" />
+                <Image 
+                    src="/logo.svg"
+                    alt="logo"
+                    width='9'
+                    height='9'
+                    className='text-white transition-all duration-500 w-9 h-9'
+                />
               </div>
               {/* Floating sparkles */}
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-ping"></div>

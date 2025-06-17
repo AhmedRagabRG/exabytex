@@ -27,6 +27,7 @@ import {
   Clock,
   Star
 } from "lucide-react"
+import Image from 'next/image';
 
 export default function SignUpPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -155,7 +156,13 @@ export default function SignUpPage() {
               <div className="flex items-center justify-center mb-6">
                 <div className="relative">
                   <div className="w-20 h-20 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg">
-                    <Brain className="text-white w-10 h-10" />
+                    <Image 
+                      src="/logo.svg"
+                      alt="logo"
+                      width='10'
+                      height='10'
+                      className='text-white transition-all duration-500 w-10 h-10'
+                    />
                   </div>
                   {/* Floating sparkles */}
                   <div className="absolute -top-2 -right-2 w-4 h-4 bg-yellow-400 rounded-full animate-ping"></div>
@@ -212,7 +219,13 @@ export default function SignUpPage() {
                   <div className="flex items-center justify-center mb-4">
                     <div className="relative">
                       <div className="w-16 h-16 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg">
-                        <Brain className="text-white w-8 h-8" />
+                        <Image 
+                          src="/logo.svg"
+                          alt="logo"
+                          width='8'
+                          height='8'
+                          className='text-white transition-all duration-500 w-8 h-8'
+                        />
                       </div>
                       {/* Floating sparkles */}
                       <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-ping"></div>

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Lock, ArrowRight, CheckCircle, Brain, Sparkles, Shield, ArrowLeft, Eye, EyeOff, AlertTriangle } from "lucide-react"
+import Image from "next/image"
 
 function ResetPasswordContent() {
   const router = useRouter()
@@ -182,7 +183,13 @@ function ResetPasswordContent() {
           <Link href="/" className="flex items-center justify-center space-x-3 rtl:space-x-reverse mb-6 group">
             <div className="relative">
               <div className="w-16 h-16 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-                <Brain className="text-white w-8 h-8" />
+                <Image 
+                  src="/logo.svg"
+                  alt="logo"
+                  width='8'
+                  height='8'
+                  className='text-white transition-all duration-500 w-8 h-8'
+                />
               </div>
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-ping"></div>
               <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></div>
