@@ -2,7 +2,7 @@
 
 import { Badge } from '@/components/ui/badge';
 import { Tag, Sparkles } from 'lucide-react';
-import { formatPrice } from '@/lib/currency';
+import { formatPrice, convertFromEGP, convertToEGP } from '@/lib/currency';
 import { useCurrencyContext } from '@/contexts/CurrencyContext';
 
 interface PriceDisplayProps {
@@ -12,6 +12,7 @@ interface PriceDisplayProps {
   className?: string;
   size?: 'sm' | 'md' | 'lg';
   showSavings?: boolean;
+  sourceCurrency?: string; // العملة الأصلية للسعر
 }
 
 export function PriceDisplay({ 
@@ -20,7 +21,8 @@ export function PriceDisplay({
   showDiscount = false,
   className = '',
   size = 'md',
-  showSavings = false
+  showSavings = false,
+  sourceCurrency = 'SAR' // افتراضياً بالريال السعودي
 }: PriceDisplayProps) {
   const { settings, isLoading } = useCurrencyContext();
 
@@ -30,14 +32,24 @@ export function PriceDisplay({
     );
   }
 
-  const formattedPrice = formatPrice(amount, settings);
-  const formattedOriginalPrice = originalAmount ? formatPrice(originalAmount, settings) : null;
+  // تحويل السعر من العملة الأصلية إلى الجنيه المصري ثم إلى العملة المختارة
+  const convertPrice = (price: number): number => {
+    if (sourceCurrency === settings.defaultCurrency) return price;
+    const priceInEGP = convertToEGP(price, sourceCurrency);
+    return convertFromEGP(priceInEGP, settings.defaultCurrency);
+  };
+
+  const convertedAmount = convertPrice(amount);
+  const convertedOriginalAmount = originalAmount ? convertPrice(originalAmount) : null;
+
+  const formattedPrice = formatPrice(convertedAmount, settings);
+  const formattedOriginalPrice = convertedOriginalAmount ? formatPrice(convertedOriginalAmount, settings) : null;
   
-  const hasDiscount = showDiscount && originalAmount && originalAmount > amount;
+  const hasDiscount = showDiscount && convertedOriginalAmount && convertedOriginalAmount > convertedAmount;
   const discountPercentage = hasDiscount 
-    ? Math.round(((originalAmount - amount) / originalAmount) * 100)
+    ? Math.round(((convertedOriginalAmount - convertedAmount) / convertedOriginalAmount) * 100)
     : 0;
-  const savings = hasDiscount ? formatPrice(originalAmount - amount, settings) : null;
+  const savings = hasDiscount ? formatPrice(convertedOriginalAmount - convertedAmount, settings) : null;
 
   // أحجام النصوص
   const sizeClasses = {
@@ -95,8 +107,16 @@ export function PriceDisplay({
 }
 
 // Component مبسط للاستخدام في الحالات البسيطة
-export function SimplePrice({ amount, className = '' }: { amount: number; className?: string }) {
-  return <PriceDisplay amount={amount} className={className} size="sm" />;
+export function SimplePrice({ 
+  amount, 
+  className = '', 
+  sourceCurrency = 'SAR' 
+}: { 
+  amount: number; 
+  className?: string;
+  sourceCurrency?: string;
+}) {
+  return <PriceDisplay amount={amount} className={className} size="sm" sourceCurrency={sourceCurrency} />;
 }
 
 // Component للخصومات
@@ -104,12 +124,14 @@ export function DiscountPrice({
   amount, 
   originalAmount, 
   className = '',
-  showSavings = true 
+  showSavings = true,
+  sourceCurrency = 'SAR'
 }: { 
   amount: number; 
   originalAmount: number; 
   className?: string;
   showSavings?: boolean;
+  sourceCurrency?: string;
 }) {
   return (
     <PriceDisplay 
@@ -119,6 +141,7 @@ export function DiscountPrice({
       showSavings={showSavings}
       className={className}
       size="md"
+      sourceCurrency={sourceCurrency}
     />
   );
 } 

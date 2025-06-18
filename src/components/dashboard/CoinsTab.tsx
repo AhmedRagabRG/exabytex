@@ -105,8 +105,8 @@ export default function CoinsTab() {
         description: `باقة ${selectedAmount} كوين لاستخدام مولد المحتوى بالذكاء الاصطناعي - رقمي`,
         price: parseFloat(calculateTotal()),
         image: '/api/placeholder/64/64',
-        category: 'Digital Currency',
-        features: JSON.stringify(['منتج رقمي', 'كوينز', 'فوري', `coinAmount:${selectedAmount}`]),
+        category: 'COINS',
+        features: selectedAmount.toString(),
         isActive: true
       };
 

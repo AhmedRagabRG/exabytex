@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
           // للكوينز: إنشاء منتج مؤقت أو البحث عن منتج موجود
           let coinProduct = await prisma.product.findFirst({
             where: {
-              category: 'Digital Currency',
+              category: 'COINS',
               title: item.name
             }
           });
@@ -146,8 +146,8 @@ export async function POST(request: NextRequest) {
                 description: item.description || `عملة رقمية - ${item.name}`,
                 price: item.price,
                 image: item.image || '/api/placeholder/64/64',
-                category: 'Digital Currency',
-                features: JSON.stringify(['منتج رقمي', 'كوينز', 'فوري']),
+                category: 'COINS',
+                features: item.name.split(' ')[0], // استخراج عدد الكوينز من العنوان
                 isActive: true
               }
             });
@@ -254,8 +254,8 @@ export async function PUT(request: NextRequest) {
           description: `باقة ${coinAmount} كوين لاستخدام مولد المحتوى بالذكاء الاصطناعي - رقمي`,
           price: coinAmount * 0.10,
           image: '/api/placeholder/64/64',
-          category: 'Digital Currency',
-          features: JSON.stringify(['منتج رقمي', 'كوينز', 'فوري']),
+          category: 'COINS',
+          features: coinAmount.toString(),
           isActive: true
         }
       });
