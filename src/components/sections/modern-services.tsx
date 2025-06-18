@@ -148,7 +148,7 @@ export function ModernServices() {
 
   if (loading) {
     return (
-      <section className="relative py-20 lg:py-32 bg-gradient-to-b from-slate-50 via-white to-slate-50 overflow-hidden">
+      <section id="services" className="relative py-20 lg:py-32 bg-gradient-to-b from-slate-50 via-white to-slate-50 overflow-hidden">
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <div className="animate-pulse">
@@ -167,7 +167,7 @@ export function ModernServices() {
   }
 
   return (
-    <section className="relative py-20 lg:py-32 bg-gradient-to-b from-slate-50 via-white to-slate-50 overflow-hidden">
+    <section id="services" className="relative py-20 lg:py-32 bg-gradient-to-b from-slate-50 via-white to-slate-50 overflow-hidden">
       {/* Animated Background */}
       <div className="absolute inset-0">
         <div className="absolute top-20 left-20 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>

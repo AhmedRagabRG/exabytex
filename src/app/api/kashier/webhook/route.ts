@@ -93,6 +93,61 @@ export async function POST(request: NextRequest) {
             console.log(`Updated promo code usage count for: ${order.promoCode.code}`);
           }
 
+          // التحقق مما إذا كان الطلب يحتوي على كوينز
+          const coinPackageItem = order.items.find(item => item.product.category === 'COINS');
+          if (coinPackageItem) {
+            // تحديث رصيد الكوينز للمستخدم
+            const userCoins = await prisma.userCoins.findUnique({
+              where: { userId: order.user.id }
+            });
+
+            const coinAmount = parseInt(coinPackageItem.product.features) || 0;
+            const currentBalance = userCoins?.balance || 0;
+
+            await prisma.userCoins.upsert({
+              where: { userId: order.user.id },
+              create: {
+                userId: order.user.id,
+                balance: coinAmount,
+                totalEarned: coinAmount,
+                totalSpent: 0
+              },
+              update: {
+                balance: currentBalance + coinAmount,
+                totalEarned: {
+                  increment: coinAmount
+                }
+              }
+            });
+
+            // إضافة سجل المعاملة
+            await prisma.coinTransaction.create({
+              data: {
+                userId: order.user.id,
+                type: 'PURCHASE',
+                amount: coinAmount,
+                reason: 'شراء كوينز',
+                description: `شراء ${coinAmount} كوينز`,
+                balanceBefore: currentBalance,
+                balanceAfter: currentBalance + coinAmount,
+                relatedId: orderId
+              }
+            });
+
+            // تحديث حالة شراء الكوينز
+            await prisma.coinPurchase.update({
+              where: {
+                id: orderId
+              },
+              data: {
+                paymentStatus: 'COMPLETED',
+                transactionId: transactionId
+              }
+            });
+
+            console.log(`Added ${coinAmount} coins to user ${order.user.id}'s balance`);
+          }
+
           // إرسال بريد إلكتروني لكل منتج
           for (const item of order.items) {
             if (item.product.downloadUrl) {
