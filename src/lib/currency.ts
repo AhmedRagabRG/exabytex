@@ -216,6 +216,25 @@ export function convertFromEGP(amount: number, toCurrency: string): number {
   return Math.round((amount / rate) * 100) / 100;
 }
 
+// تحويل المبلغ من الريال السعودي إلى عملة أخرى
+export function convertFromSAR(amount: number, toCurrency: string): number {
+  if (toCurrency === 'SAR') {
+    return amount;
+  }
+
+  // أولاً نحول المبلغ إلى الجنيه المصري
+  const amountInEGP = amount * EXCHANGE_RATES.SAR;
+
+  // ثم نحول من الجنيه المصري إلى العملة المطلوبة
+  const rate = EXCHANGE_RATES[toCurrency as keyof typeof EXCHANGE_RATES];
+  if (!rate) {
+    console.warn(`سعر صرف غير متوفر للعملة: ${toCurrency}`);
+    return amount;
+  }
+
+  return amountInEGP / rate;
+}
+
 // الحصول على المبلغ المناسب للكاشير (دائماً بالجنيه المصري)
 export async function getAmountForKashier(amount: number): Promise<{
   originalAmount: number;

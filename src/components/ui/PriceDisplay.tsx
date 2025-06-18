@@ -2,7 +2,7 @@
 
 import { Badge } from '@/components/ui/badge';
 import { Tag, Sparkles } from 'lucide-react';
-import { formatPrice, convertFromEGP, convertToEGP } from '@/lib/currency';
+import { formatPrice, convertFromSAR, EXCHANGE_RATES } from '@/lib/currency';
 import { useCurrencyContext } from '@/contexts/CurrencyContext';
 
 interface PriceDisplayProps {
@@ -12,7 +12,6 @@ interface PriceDisplayProps {
   className?: string;
   size?: 'sm' | 'md' | 'lg';
   showSavings?: boolean;
-  sourceCurrency?: string; // العملة الأصلية للسعر
 }
 
 export function PriceDisplay({ 
@@ -21,8 +20,7 @@ export function PriceDisplay({
   showDiscount = false,
   className = '',
   size = 'md',
-  showSavings = false,
-  sourceCurrency = 'SAR' // افتراضياً بالريال السعودي
+  showSavings = false
 }: PriceDisplayProps) {
   const { settings, isLoading } = useCurrencyContext();
 
@@ -32,15 +30,9 @@ export function PriceDisplay({
     );
   }
 
-  // تحويل السعر من العملة الأصلية إلى الجنيه المصري ثم إلى العملة المختارة
-  const convertPrice = (price: number): number => {
-    if (sourceCurrency === settings.defaultCurrency) return price;
-    const priceInEGP = convertToEGP(price, sourceCurrency);
-    return convertFromEGP(priceInEGP, settings.defaultCurrency);
-  };
-
-  const convertedAmount = convertPrice(amount);
-  const convertedOriginalAmount = originalAmount ? convertPrice(originalAmount) : null;
+  // تحويل المبلغ من الريال السعودي إلى العملة المختارة
+  const convertedAmount = convertFromSAR(amount, settings.defaultCurrency);
+  const convertedOriginalAmount = originalAmount ? convertFromSAR(originalAmount, settings.defaultCurrency) : null;
 
   const formattedPrice = formatPrice(convertedAmount, settings);
   const formattedOriginalPrice = convertedOriginalAmount ? formatPrice(convertedOriginalAmount, settings) : null;
@@ -107,16 +99,8 @@ export function PriceDisplay({
 }
 
 // Component مبسط للاستخدام في الحالات البسيطة
-export function SimplePrice({ 
-  amount, 
-  className = '', 
-  sourceCurrency = 'SAR' 
-}: { 
-  amount: number; 
-  className?: string;
-  sourceCurrency?: string;
-}) {
-  return <PriceDisplay amount={amount} className={className} size="sm" sourceCurrency={sourceCurrency} />;
+export function SimplePrice({ amount, className = '' }: { amount: number; className?: string }) {
+  return <PriceDisplay amount={amount} className={className} size="sm" />;
 }
 
 // Component للخصومات
@@ -124,14 +108,12 @@ export function DiscountPrice({
   amount, 
   originalAmount, 
   className = '',
-  showSavings = true,
-  sourceCurrency = 'SAR'
+  showSavings = true 
 }: { 
   amount: number; 
   originalAmount: number; 
   className?: string;
   showSavings?: boolean;
-  sourceCurrency?: string;
 }) {
   return (
     <PriceDisplay 
@@ -141,7 +123,6 @@ export function DiscountPrice({
       showSavings={showSavings}
       className={className}
       size="md"
-      sourceCurrency={sourceCurrency}
     />
   );
 } 
